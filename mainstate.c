@@ -138,6 +138,7 @@ Msg const *MainState_top(MainState *me, Msg *msg)
 		data.ipc.state.nExposureTime = 25;
 		data.ipc.state.nStepCounter = 0;
 		data.ipc.state.nThreshold = 30;
+		InitProcess();
 		return 0;
 	case IPC_GET_APP_STATE_EVT:
 		/* Fill in the response and schedule an acknowledge for the request. */
@@ -161,16 +162,19 @@ Msg const *MainState_top(MainState *me, Msg *msg)
 		/* we have a new image increase counter: here and only here! */
 		data.ipc.state.nStepCounter++;
 		/* debayer the image first -> to half size*/
-		OscVisDebayerGreyscaleHalfSize( data.pCurRawImg, OSC_CAM_MAX_IMAGE_WIDTH, OSC_CAM_MAX_IMAGE_HEIGHT, ROW_BGBG, data.u8TempImage[GRAYSCALE]);
+#if NUM_COLORS == 1
+		OscVisDebayerGreyscaleHalfSize( data.pCurRawImg, OSC_CAM_MAX_IMAGE_WIDTH, OSC_CAM_MAX_IMAGE_HEIGHT, ROW_BGBG, data.u8TempImage[SENSORIMG]);
+#else
+		OscVisDebayerHalfSize( data.pCurRawImg, OSC_CAM_MAX_IMAGE_WIDTH, OSC_CAM_MAX_IMAGE_HEIGHT, ROW_RGRG, data.u8TempImage[SENSORIMG]);
+#endif
 		/* Process the image. */
-		/* the parameter is not really required */
-		ProcessFrame(data.u8TempImage[GRAYSCALE]);
+		ProcessFrame();
 
 		return 0;
 	}
 	case IPC_SET_IMAGE_TYPE_EVT:
 	{
-		if(data.ipc.state.nImageType == GRAYSCALE) {
+		if(data.ipc.state.nImageType == SENSORIMG) {
 			STATE_TRAN(me, &me->showGray);
 		}
 		else if(data.ipc.state.nImageType == THRESHOLD) {
@@ -200,7 +204,7 @@ Msg const *MainState_ShowGray(MainState *me, Msg *msg)
 	case IPC_GET_NEW_IMG_EVT:
 	{
 		/* Write out the current gray image to the address space of the CGI. */
-		memcpy(data.ipc.req.pAddr, data.u8TempImage[GRAYSCALE], sizeof(data.u8TempImage[GRAYSCALE]));
+		memcpy(data.ipc.req.pAddr, data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[SENSORIMG]));
 
 		data.ipc.state.bNewImageReady = FALSE;
 

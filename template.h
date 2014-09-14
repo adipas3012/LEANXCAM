@@ -25,6 +25,7 @@
 /*! @brief The file name of the test image on the host. */
 #define TEST_IMAGE_FN "test.bmp"
 
+
 /*------------------- Main data object and members ------------------*/
 
 /*! @brief The different states of a pending IPC request. */
@@ -55,9 +56,10 @@ struct IPC_DATA
  * */
 enum IMG_TYPE
 {
- 	GRAYSCALE,
+ 	SENSORIMG,
  	BACKGROUND,
  	THRESHOLD,
+ 	PROCESSFRAME0,
  	MAX_NUM_IMG
 };
 
@@ -69,7 +71,7 @@ struct TEMPLATE
 	/*! @brief The frame buffers for the frame capture device driver.*/
 	uint8 u8FrameBuffers[NR_FRAME_BUFFERS][OSC_CAM_MAX_IMAGE_HEIGHT*OSC_CAM_MAX_IMAGE_WIDTH];
 	/*! @brief A buffer to hold the temporary image. */
-	uint8 u8TempImage[MAX_NUM_IMG][OSC_CAM_MAX_IMAGE_WIDTH/2*OSC_CAM_MAX_IMAGE_HEIGHT/2];
+	uint8 u8TempImage[MAX_NUM_IMG][NUM_COLORS*OSC_CAM_MAX_IMAGE_WIDTH/2*OSC_CAM_MAX_IMAGE_HEIGHT/2];
 	/* indicates that the shutter time changed */
 	bool nExposureTimeChanged;
 	/* the threshold used for processing purposes */
@@ -142,13 +144,21 @@ OSC_ERR AckIpcRequests();
 void IpcSendImage(fract16 *f16Image, uint32 nPixels);
 
 /*********************************************************************//*!
+ * @brief initialize processing .
+ *
+ * here all initialization required for the function ProcessFrame() can
+ * be done
+ *
+ *//*********************************************************************/
+void InitProcess();
+
+/*********************************************************************//*!
  * @brief Process a newly captured frame.
  * 
  * In the case of this template, this consists just of debayering the
  * image and writing the result to the result image buffer. This should
  * be the starting point where you add your code.
  * 
- * @param pRawImg The raw image to process.
  *//*********************************************************************/
 void ProcessFrame();
 

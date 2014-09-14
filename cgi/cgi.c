@@ -158,7 +158,7 @@ static OSC_ERR QueryApp()
 		if (cgi.appState.bNewImageReady)
 		{
 			/* If there is a new image ready, request it from the application. */
-			err = OscIpcGetParam(cgi.ipcChan, cgi.imgBuf, GET_NEW_IMG, OSC_CAM_MAX_IMAGE_WIDTH/2*OSC_CAM_MAX_IMAGE_HEIGHT/2);
+			err = OscIpcGetParam(cgi.ipcChan, cgi.imgBuf, GET_NEW_IMG, NUM_COLORS*OSC_CAM_MAX_IMAGE_WIDTH/2*OSC_CAM_MAX_IMAGE_HEIGHT/2);
 			if (err != SUCCESS)
 			{
 				OscLog(DEBUG, "CGI: Getting new image failed! (%d)\n", err);
@@ -169,7 +169,11 @@ static OSC_ERR QueryApp()
 			 * up by the webserver on request from the browser. */
 			pic.width = OSC_CAM_MAX_IMAGE_WIDTH/2;
 			pic.height = OSC_CAM_MAX_IMAGE_HEIGHT/2;
+#if NUM_COLORS == 1
 			pic.type = OSC_PICTURE_GREYSCALE;
+#else
+			pic.type = OSC_PICTURE_BGR_24;
+#endif
 			pic.data = (void*)cgi.imgBuf;
 
 			return OscBmpWrite(&pic, IMG_FN);

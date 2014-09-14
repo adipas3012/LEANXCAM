@@ -85,6 +85,6 @@ struct CGI_TEMPLATE
 	/*! @brief The GET/POST arguments of the CGI. */
 	struct ARGUMENT_DATA    args;
 	/*! @brief Temporary data buffer for the images to be saved. */
-	uint8 imgBuf[3*OSC_CAM_MAX_IMAGE_WIDTH*OSC_CAM_MAX_IMAGE_HEIGHT];
+	uint8 imgBuf[NUM_COLORS*OSC_CAM_MAX_IMAGE_WIDTH*OSC_CAM_MAX_IMAGE_HEIGHT];
 };
 #endif /*CGI_TEMPLATE_H_*/

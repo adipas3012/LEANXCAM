@@ -11,6 +11,9 @@
 #ifndef TEMPLATE_IPC_H_
 #define TEMPLATE_IPC_H_
 
+/*! @brief set to three to work with color images */
+#define NUM_COLORS 3
+
 /* The parameter IDs to identify the different requests/responses. */
 enum EnIpcParamIds
 {
