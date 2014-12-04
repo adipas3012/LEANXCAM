@@ -23,7 +23,7 @@ typedef struct {
 void ChangeDetection();
 void DetectRegions();
 void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
-void toggle();
+void toggle(struct OSC_VIS_REGIONS *regions);
 
 //width of SENSORIMG (the original camera image is reduced by a factor of 2)
 const int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
@@ -52,7 +52,7 @@ void InitProcess() {
 	OscGpioSetupPolarity(GPIO_OUT1, FALSE);
 	OscGpioSetupPolarity(GPIO_OUT2, FALSE);
 	//set one digital output to high the other to low
-	OscGpioWrite(GPIO_OUT1, TRUE);
+	OscGpioWrite(GPIO_OUT1, FALSE);
 	OscGpioWrite(GPIO_OUT2, FALSE);
 	//set initial status of IO
 	outputIO = 1;
@@ -97,14 +97,16 @@ void ProcessFrame() {
 		DetectRegions();
 
 		//save current image frame in BACKGROUND (before we draw the rectangles)
-		memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
+		if((data.ipc.state.nStepCounter==100)) { //each 100th pic captured, will be compared with BACKROUND.
+			memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
+		}
 
 		//draw regions directly to the image (the image content is changed!)
 		DrawBoundingBox(&Pic2, &ImgRegions, color);
 
-		//every ten image steps we toggle the digital outputs
-		if(!(data.ipc.state.nStepCounter%10)) {
-			toggle();
+		//every five image steps we toggle the digital outputs
+		if(!(data.ipc.state.nStepCounter%50)) {
+			toggle(&ImgRegions);
 		}
 	}
 }
@@ -207,15 +209,15 @@ void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions,
  * @brief Toggle digital output status
  *
  *//*********************************************************************/
-void toggle()
+void toggle(struct OSC_VIS_REGIONS *regions)
 {
     OSC_ERR err = SUCCESS;
-    if(outputIO == 1){
-	  err = OscGpioWrite(GPIO_OUT1, FALSE);
+    if(regions->noOfObjects>0){
+	  err = OscGpioWrite(GPIO_OUT1, TRUE);
 	  err = OscGpioWrite(GPIO_OUT2, TRUE);
 	  outputIO = 0;
     }else{
-	  err = OscGpioWrite(GPIO_OUT1, TRUE);
+	  err = OscGpioWrite(GPIO_OUT1, FALSE);
 	  err = OscGpioWrite(GPIO_OUT2, FALSE);
 	  outputIO = 1;
     }
