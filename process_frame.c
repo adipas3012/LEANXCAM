@@ -24,6 +24,8 @@ void ChangeDetection();
 void DetectRegions();
 void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
 void toggle();
+void MaxArea(struct OSC_VIS_REGIONS *regions);
+void GetAvarageColor();
 
 //width of SENSORIMG (the original camera image is reduced by a factor of 2)
 const int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
@@ -92,7 +94,7 @@ void ProcessFrame() {
 
 		//call function change detection
 		ChangeDetection();
-
+		GetAvarageColor();
 		//call function for region detection
 		DetectRegions();
 
@@ -102,9 +104,11 @@ void ProcessFrame() {
 		//draw regions directly to the image (the image content is changed!)
 		DrawBoundingBox(&Pic2, &ImgRegions, color);
 
+		MaxArea(&ImgRegions);
+
 		//every ten image steps we toggle the digital outputs
-		if(!(data.ipc.state.nStepCounter%10)) {
-			toggle();
+		if(!(data.ipc.state.nStepCounter%50)) {
+			toggle(&ImgRegions);
 		}
 	}
 }
@@ -207,15 +211,15 @@ void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions,
  * @brief Toggle digital output status
  *
  *//*********************************************************************/
-void toggle()
+void toggle(struct OSC_VIS_REGIONS *regions)
 {
     OSC_ERR err = SUCCESS;
     if(outputIO == 1){
-	  err = OscGpioWrite(GPIO_OUT1, FALSE);
+	  err = OscGpioWrite(GPIO_OUT1, TRUE);
 	  err = OscGpioWrite(GPIO_OUT2, TRUE);
 	  outputIO = 0;
     }else{
-	  err = OscGpioWrite(GPIO_OUT1, TRUE);
+	  err = OscGpioWrite(GPIO_OUT1, FALSE);
 	  err = OscGpioWrite(GPIO_OUT2, FALSE);
 	  outputIO = 1;
     }
@@ -225,3 +229,49 @@ void toggle()
 
 	return;
 }
+
+void MaxArea(struct OSC_VIS_REGIONS *regions){
+		int i = 0;
+		int temp = 0;
+		for (i = 0; i < regions->noOfObjects; i++)
+		{
+			if (regions->objects[i].area >= temp)
+			{
+				temp = regions->objects[i].area;
+			}
+		}
+		printf("Biggest Area: %d\n", temp);
+}
+
+void GetAvarageColor()
+{
+ 	int colorcounter[2];
+	int row, col, cpl, coln, stp;
+	//loop over the rows
+	for(row = 0; row < siz; row += nc) {
+		//loop over the columns
+		for(col = 0; col < nc; col++) {
+
+			int16 Dif = 0;
+			//loop over the color planes (blue - green - red) and sum up the difference
+
+			for(cpl = 0; cpl < NUM_COLORS; cpl++) {
+				Dif += abs((int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl]-
+												(int16) data.u8TempImage[BACKGROUND][(row+col)*NUM_COLORS+cpl]);
+				//if the difference is larger than threshold value (can be changed on web interface)
+				if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
+
+					}
+			}
+
+
+
+		}
+	}
+	int coloravarage[2];
+	for(coln = 0; coln < NUM_COLORS; coln++){
+		coloravarage[coln] = (colorcounter[coln]/stp)*3;
+		printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
+}
+}
+
