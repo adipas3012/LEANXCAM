@@ -24,6 +24,8 @@ void ChangeDetection();
 void DetectRegions();
 void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
 void toggle(struct OSC_VIS_REGIONS *regions);
+void MaxArea(struct OSC_VIS_REGIONS *regions);
+void GetAvarageColor();
 
 //width of SENSORIMG (the original camera image is reduced by a factor of 2)
 const int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
@@ -40,8 +42,6 @@ struct OSC_VIS_REGIONS ImgRegions;//these contain the foreground objects
 //keeps track of digital output status
 int outputIO;
 
-
-
 /*********************************************************************//*!
  * @brief this function is only executed at start up
  * put all initialization stuff in here
@@ -57,7 +57,6 @@ void InitProcess() {
 	//set initial status of IO
 	outputIO = 1;
 }
-
 
 /*********************************************************************//*!
  * @brief this function is executed for each image processing step
@@ -93,6 +92,9 @@ void ProcessFrame() {
 		//call function change detection
 		ChangeDetection();
 
+		//call Durchschnitt der Farben
+		GetAvarageColor();
+
 		//call function for region detection
 		DetectRegions();
 
@@ -104,13 +106,14 @@ void ProcessFrame() {
 		//draw regions directly to the image (the image content is changed!)
 		DrawBoundingBox(&Pic2, &ImgRegions, color);
 
-		//every five image steps we toggle the digital outputs
+		MaxArea(&ImgRegions);
+
+		//every fifty image steps we toggle the digital outputs
 		if(!(data.ipc.state.nStepCounter%50)) {
 			toggle(&ImgRegions);
 		}
 	}
 }
-
 
 /*********************************************************************//*!
  * @brief calculate the difference of the current image (SENSORIMG) and
@@ -145,6 +148,7 @@ void ChangeDetection() {
 	}
 }
 
+// Durchschnitt der BGR-Werte berechnen und in Konsole drucken lassen
 
 
 /*********************************************************************//*!
@@ -166,6 +170,8 @@ void DetectRegions() {
 	OscVisLabelBinary( &Pic1, &ImgRegions);
 	OscVisGetRegionProperties( &ImgRegions);
 
+	//PrintObjectProperties(&ImgRegions); //Ausgabe der detektierten Objekte in Konsole unten; AREA: ca. 3500 Pixel (Änderung)
+
 	//also wrap SENSORIMG to an OSC_VIS_PICTURE structure
 	//because we use it in DrawBoundingBoxColor()
 	Pic2.data = data.u8TempImage[SENSORIMG];
@@ -173,7 +179,6 @@ void DetectRegions() {
 	Pic2.height = nr;
 	Pic2.type = OSC_PICTURE_BGR_24;
 }
-
 
 /*********************************************************************//*!
  * @brief draw a bounding box around all regions found in the given
@@ -226,4 +231,59 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 	}
 
 	return;
+}
+
+	// Ausgabe grösste # Pixel im Index
+void MaxArea(struct OSC_VIS_REGIONS *regions)
+	{
+		int i = 0;
+		int temp = 0;
+		for (i = 0; i < regions->noOfObjects; i++)
+		{
+			if (regions->objects[i].area >= temp)
+			{
+				temp = regions->objects[i].area;
+			}
+		}
+		printf("Biggest Area: %d\n", temp);
+	}
+
+void GetAvarageColor()
+{
+ 	int colorcounter[3] = {0,0,0};
+	int row, col, cpl, coln, stp;
+	stp = 0;
+	//loop over the rows
+	for(row = 0; row < siz; row += nc) {
+		//loop over the columns
+		for(col = 0; col < nc; col++) {
+
+			int16 Dif = 0;
+			//loop over the color planes (blue - green - red) and sum up the difference
+
+			for(cpl = 0; cpl < NUM_COLORS; cpl++) {
+				Dif += abs((int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl]-
+												(int16) data.u8TempImage[BACKGROUND][(row+col)*NUM_COLORS+cpl]);
+				//if the difference is larger than threshold value (can be changed on web interface)
+				if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
+
+					//count color values
+					colorcounter[cpl] = colorcounter[cpl] + (int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl];
+					stp++;
+
+					}
+			}
+
+
+
+		}
+	}
+	int coloravarage[3] = {0,0,0};
+	stp = stp/3;
+	for(coln = 0; coln < NUM_COLORS; coln++){
+		if (stp > 0){
+		coloravarage[coln] = colorcounter[coln]/stp;
+		}
+		printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
+}
 }
