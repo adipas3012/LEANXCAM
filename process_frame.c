@@ -23,7 +23,7 @@ typedef struct {
 void ChangeDetection();
 void DetectRegions();
 void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
-void toggle();
+void toggle(struct OSC_VIS_REGIONS *regions);
 void MaxArea(struct OSC_VIS_REGIONS *regions);
 void GetAvarageColor();
 
@@ -42,8 +42,6 @@ struct OSC_VIS_REGIONS ImgRegions;//these contain the foreground objects
 //keeps track of digital output status
 int outputIO;
 
-
-
 /*********************************************************************//*!
  * @brief this function is only executed at start up
  * put all initialization stuff in here
@@ -54,12 +52,11 @@ void InitProcess() {
 	OscGpioSetupPolarity(GPIO_OUT1, FALSE);
 	OscGpioSetupPolarity(GPIO_OUT2, FALSE);
 	//set one digital output to high the other to low
-	OscGpioWrite(GPIO_OUT1, TRUE);
+	OscGpioWrite(GPIO_OUT1, FALSE);
 	OscGpioWrite(GPIO_OUT2, FALSE);
 	//set initial status of IO
 	outputIO = 1;
 }
-
 
 /*********************************************************************//*!
  * @brief this function is executed for each image processing step
@@ -94,13 +91,16 @@ void ProcessFrame() {
 
 		//call function change detection
 		ChangeDetection();
+
+		//call Durchschnitt der Farben
 		GetAvarageColor();
+
 		//call function for region detection
 		DetectRegions();
 
 		//save current image frame in BACKGROUND (before we draw the rectangles)
-		if(data.ipc.state.nStepCounter == 50) {
-		memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
+		if((data.ipc.state.nStepCounter==100)) { //each 100th pic captured, will be compared with BACKROUND.
+			memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
 		}
 
 		//draw regions directly to the image (the image content is changed!)
@@ -108,13 +108,12 @@ void ProcessFrame() {
 
 		MaxArea(&ImgRegions);
 
-		//every ten image steps we toggle the digital outputs
+		//every fifty image steps we toggle the digital outputs
 		if(!(data.ipc.state.nStepCounter%50)) {
 			toggle(&ImgRegions);
 		}
 	}
 }
-
 
 /*********************************************************************//*!
  * @brief calculate the difference of the current image (SENSORIMG) and
@@ -149,6 +148,7 @@ void ChangeDetection() {
 	}
 }
 
+// Durchschnitt der BGR-Werte berechnen und in Konsole drucken lassen
 
 
 /*********************************************************************//*!
@@ -170,6 +170,8 @@ void DetectRegions() {
 	OscVisLabelBinary( &Pic1, &ImgRegions);
 	OscVisGetRegionProperties( &ImgRegions);
 
+	//PrintObjectProperties(&ImgRegions); //Ausgabe der detektierten Objekte in Konsole unten; AREA: ca. 3500 Pixel (Änderung)
+
 	//also wrap SENSORIMG to an OSC_VIS_PICTURE structure
 	//because we use it in DrawBoundingBoxColor()
 	Pic2.data = data.u8TempImage[SENSORIMG];
@@ -177,7 +179,6 @@ void DetectRegions() {
 	Pic2.height = nr;
 	Pic2.type = OSC_PICTURE_BGR_24;
 }
-
 
 /*********************************************************************//*!
  * @brief draw a bounding box around all regions found in the given
@@ -216,7 +217,7 @@ void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions,
 void toggle(struct OSC_VIS_REGIONS *regions)
 {
     OSC_ERR err = SUCCESS;
-    if(outputIO == 1){
+    if(regions->noOfObjects>0){
 	  err = OscGpioWrite(GPIO_OUT1, TRUE);
 	  err = OscGpioWrite(GPIO_OUT2, TRUE);
 	  outputIO = 0;
@@ -232,7 +233,9 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 	return;
 }
 
-void MaxArea(struct OSC_VIS_REGIONS *regions){
+	// Ausgabe grösste # Pixel im Index
+void MaxArea(struct OSC_VIS_REGIONS *regions)
+	{
 		int i = 0;
 		int temp = 0;
 		for (i = 0; i < regions->noOfObjects; i++)
@@ -243,7 +246,7 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 			}
 		}
 		printf("Biggest Area: %d\n", temp);
-}
+	}
 
 void GetAvarageColor()
 {
@@ -284,6 +287,3 @@ void GetAvarageColor()
 		printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 }
 }
-
-
-
