@@ -99,7 +99,9 @@ void ProcessFrame() {
 		DetectRegions();
 
 		//save current image frame in BACKGROUND (before we draw the rectangles)
+		if(data.ipc.state.nStepCounter == 50) {
 		memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
+		}
 
 		//draw regions directly to the image (the image content is changed!)
 		DrawBoundingBox(&Pic2, &ImgRegions, color);
@@ -245,8 +247,9 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 
 void GetAvarageColor()
 {
- 	int colorcounter[2];
+ 	int colorcounter[3] = {0,0,0};
 	int row, col, cpl, coln, stp;
+	stp = 0;
 	//loop over the rows
 	for(row = 0; row < siz; row += nc) {
 		//loop over the columns
@@ -261,6 +264,10 @@ void GetAvarageColor()
 				//if the difference is larger than threshold value (can be changed on web interface)
 				if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
 
+					//count color values
+					colorcounter[cpl] = colorcounter[cpl] + (int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl];
+					stp++;
+
 					}
 			}
 
@@ -268,10 +275,15 @@ void GetAvarageColor()
 
 		}
 	}
-	int coloravarage[2];
+	int coloravarage[3] = {0,0,0};
+	stp = stp/3;
 	for(coln = 0; coln < NUM_COLORS; coln++){
-		coloravarage[coln] = (colorcounter[coln]/stp)*3;
+		if (stp > 0){
+		coloravarage[coln] = colorcounter[coln]/stp;
+		}
 		printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 }
 }
+
+
 
