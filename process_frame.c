@@ -19,13 +19,21 @@ typedef struct {
         uint8 blue, green, red;
 } s_color;
 
+long framestep = 0;
+long colorcounter[3] = {0,0,0};
+long stp = 0;
+int BiggestArea = 0;
+int RegionNumber = 0;
+int coloravarage[3] = {0,0,0};
+
 //local function definitions
 void ChangeDetection();
 void DetectRegions();
 void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
 void toggle(struct OSC_VIS_REGIONS *regions);
 void MaxArea(struct OSC_VIS_REGIONS *regions);
-void GetAvarageColor();
+void Activated();
+void Decisions();
 
 //width of SENSORIMG (the original camera image is reduced by a factor of 2)
 const int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
@@ -58,6 +66,7 @@ void InitProcess() {
 	outputIO = 1;
 }
 
+
 /*********************************************************************//*!
  * @brief this function is executed for each image processing step
  * the camera image is in the image buffer: data.u8TempImage[SENSORIMG]
@@ -75,8 +84,10 @@ void ProcessFrame() {
 
 	//step counter, is increased after each step
 	if(data.ipc.state.nStepCounter == 1) {
+
 		//this is the first time we have valid image data
 		//here we put routines that require image data and are only executed once at the beginning
+
 
 		//set frame-buffer THRESHOLD to zero
 		memset(data.u8TempImage[THRESHOLD], 0, sizeof(data.u8TempImage[THRESHOLD]));
@@ -92,8 +103,7 @@ void ProcessFrame() {
 		//call function change detection
 		ChangeDetection();
 
-		//call Durchschnitt der Farben
-		GetAvarageColor();
+
 
 		//call function for region detection
 		DetectRegions();
@@ -106,10 +116,11 @@ void ProcessFrame() {
 		//draw regions directly to the image (the image content is changed!)
 		DrawBoundingBox(&Pic2, &ImgRegions, color);
 
-		MaxArea(&ImgRegions);
+		//MaxArea(&ImgRegions);
+		//Activated();
 
 		//every fifty image steps we toggle the digital outputs
-		if(!(data.ipc.state.nStepCounter%50)) {
+		if(!(data.ipc.state.nStepCounter%10)) {
 			toggle(&ImgRegions);
 		}
 	}
@@ -148,7 +159,6 @@ void ChangeDetection() {
 	}
 }
 
-// Durchschnitt der BGR-Werte berechnen und in Konsole drucken lassen
 
 
 /*********************************************************************//*!
@@ -233,57 +243,127 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 	return;
 }
 
-	// Ausgabe grösste # Pixel im Index
 void MaxArea(struct OSC_VIS_REGIONS *regions)
 	{
-		int i = 0;
 		int temp = 0;
-		for (i = 0; i < regions->noOfObjects; i++)
+		int numbertemp = 0;
+		for (int i = 0; i < regions->noOfObjects; i++)
 		{
 			if (regions->objects[i].area >= temp)
 			{
 				temp = regions->objects[i].area;
+				numbertemp = i;
 			}
 		}
 		printf("Biggest Area: %d\n", temp);
+
+		//RegionNumber und BiggestArea weitergeben (erst jetzt in externe Variable geschrieben):
+		BiggestArea = temp;
+		RegionNumber = numbertemp;
+
 	}
 
-void GetAvarageColor()
+
+
+
+void Activated()
 {
- 	int colorcounter[3] = {0,0,0};
-	int row, col, cpl, coln, stp;
-	stp = 0;
-	//loop over the rows
-	for(row = 0; row < siz; row += nc) {
-		//loop over the columns
-		for(col = 0; col < nc; col++) {
+	if (BiggestArea >= 1500)
+	{
 
-			int16 Dif = 0;
-			//loop over the color planes (blue - green - red) and sum up the difference
+		if(data.ipc.state.nStepCounter-framestep > 20){
+		framestep = data.ipc.state.nStepCounter;
+		memset (colorcounter, 0, sizeof (colorcounter));
+		stp = 0;
+		}
 
-			for(cpl = 0; cpl < NUM_COLORS; cpl++) {
-				Dif += abs((int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl]-
+		if(data.ipc.state.nStepCounter-framestep < 20){
+			int row, col, cpl;
+
+			//loop over the rows
+			for(row = 0; row < siz; row += nc) {
+
+				//loop over the columns
+				for(col = 0; col < nc; col++) {
+				int16 Dif = 0;
+
+					//loop over the color planes (blue - green - red) and sum up the difference
+					for(cpl = 0; cpl < NUM_COLORS; cpl++) {
+					Dif += abs((int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl]-
 												(int16) data.u8TempImage[BACKGROUND][(row+col)*NUM_COLORS+cpl]);
-				//if the difference is larger than threshold value (can be changed on web interface)
-				if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
+						//if the difference is larger than threshold value (can be changed on web interface)
+						if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
 
-					//count color values
-					colorcounter[cpl] = colorcounter[cpl] + (int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl];
-					stp++;
-
+							//count color values
+							colorcounter[cpl] = colorcounter[cpl] + (int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl];
+							stp++;
+						}
 					}
+				}
+			}
+			printf("Der colorcounter betraegt: ");
+			for(int k = 0; k < 3; k++){
+			printf("%d ", colorcounter[k]);
+			}
+		}
+	}
+
+
+
+	if(data.ipc.state.nStepCounter-framestep == 20){
+
+		memset (coloravarage, 0, sizeof (coloravarage));
+		stp = stp/3;
+		for(int coln = 0; coln < NUM_COLORS; coln++){
+			if (stp > 0){
+				coloravarage[coln] = colorcounter[coln]/stp;
 			}
 
+			printf("Die 20er-Durchschnittsfarbe ist");
+			printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 
-
-		}
+	// Hier wird dann die decisions-Funktion aufgerufen.
+	// Decisions();
 	}
-	int coloravarage[3] = {0,0,0};
-	stp = stp/3;
-	for(coln = 0; coln < NUM_COLORS; coln++){
-		if (stp > 0){
-		coloravarage[coln] = colorcounter[coln]/stp;
-		}
-		printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
+
+}
+}
+
+
+void Decisions(){
+
+
+int white[6] = {100,200,100,200,100,200};
+int red [6] = {50,150,50,150,50,150};
+int color = 0;
+int size = 0;
+
+
+if (white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[3] < coloravarage[1] && white[4] > coloravarage[1]  && white[5] < coloravarage[2] && white[6] > coloravarage[2])
+{
+//Gummibaerchen ist weiss
+color = 1;
+}
+
+
+if (red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[3] < coloravarage[1] && red[4] > coloravarage[1]  && red[5] < coloravarage[2] && red[6] > coloravarage[2])
+{
+//Gummibarrchen ist rot
+color = 1;
+}
+
+
+if (BiggestArea > 1500 && BiggestArea < 3000)
+{
+size=1;
+}
+
+
+
+if (size == 1 && color == 1)
+{
+//GPIOS ansteuern
+
+
 }
 }
