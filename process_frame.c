@@ -24,8 +24,8 @@ void ChangeDetection();
 void DetectRegions();
 void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
 void toggle(struct OSC_VIS_REGIONS *regions);
-void MaxArea(struct OSC_VIS_REGIONS *regions);
-void GetAvarageColor();
+//void MaxArea(struct OSC_VIS_REGIONS *regions);
+//void GetAvarageColor();
 
 //width of SENSORIMG (the original camera image is reduced by a factor of 2)
 const int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
@@ -109,7 +109,7 @@ void ProcessFrame() {
 		MaxArea(&ImgRegions);
 
 		//every fifty image steps we toggle the digital outputs
-		if(!(data.ipc.state.nStepCounter%50)) {
+		if(!(data.ipc.state.nStepCounter%30)) {
 			toggle(&ImgRegions);
 		}
 	}
@@ -148,7 +148,7 @@ void ChangeDetection() {
 	}
 }
 
-// Durchschnitt der BGR-Werte berechnen und in Konsole drucken lassen
+// Durchschnitt der BGR-Werte berechnen und in Konsole ausgeben lassen
 
 
 /*********************************************************************//*!
@@ -232,7 +232,7 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 
 	return;
 }
-
+/*
 	// Ausgabe grösste # Pixel im Index
 void MaxArea(struct OSC_VIS_REGIONS *regions)
 	{
@@ -270,12 +270,8 @@ void GetAvarageColor()
 					//count color values
 					colorcounter[cpl] = colorcounter[cpl] + (int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl];
 					stp++;
-
-					}
+				}
 			}
-
-
-
 		}
 	}
 	int coloravarage[3] = {0,0,0};
@@ -285,5 +281,6 @@ void GetAvarageColor()
 		coloravarage[coln] = colorcounter[coln]/stp;
 		}
 		printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
+	}
 }
-}
+*/
