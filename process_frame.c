@@ -116,8 +116,8 @@ void ProcessFrame() {
 		//draw regions directly to the image (the image content is changed!)
 		DrawBoundingBox(&Pic2, &ImgRegions, color);
 
-		//MaxArea(&ImgRegions);
-		//Activated();
+		MaxArea(&ImgRegions);
+		Activated();
 
 		//every fifty image steps we toggle the digital outputs
 		if(!(data.ipc.state.nStepCounter%10)) {
@@ -239,7 +239,6 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 	if (err != SUCCESS) {
 	  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 	}
-
 	return;
 }
 
@@ -319,7 +318,7 @@ void Activated()
 				coloravarage[coln] = colorcounter[coln]/stp;
 			}
 
-			printf("Die 20er-Durchschnittsfarbe ist");
+			printf("Die 20er-Durchschnittsfarbe ist ");
 			printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 
 	// Hier wird dann die decisions-Funktion aufgerufen.
@@ -348,7 +347,7 @@ color = 1;
 
 if (red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[3] < coloravarage[1] && red[4] > coloravarage[1]  && red[5] < coloravarage[2] && red[6] > coloravarage[2])
 {
-//Gummibarrchen ist rot
+//Gummibaerchen ist rot
 color = 1;
 }
 
