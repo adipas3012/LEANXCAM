@@ -25,6 +25,7 @@ long stp = 0;
 int BiggestArea = 0;
 int RegionNumber = 0;
 int coloravarage[3] = {0,0,0};
+int framediff = 0;
 #define sizetimebuffer 10
 int timestamp[sizetimebuffer] = {0,0,0,0,0,0,0,0,0,0};
 int gpiotimer = 0;
@@ -125,11 +126,11 @@ void ProcessFrame() {
 		MaxArea(&ImgRegions);
 		ControlGPIO(&Pic2, &ImgRegions);
 
-		/*
+/*
 		if(!(data.ipc.state.nStepCounter%50)) {
 			toggle(&ImgRegions);
 		}
-		*/
+*/
 
 
 	}
@@ -304,7 +305,7 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 	BiggestArea = temp;
 	RegionNumber = numbertemp;
 	//Hier wird bei genuegender Groesse der Aktiviert-Modus aktiviert.
-	if (BiggestArea >= 3000){
+	if (BiggestArea >= 3000 || framediff <= 5){
 		Activated(&Pic2, &ImgRegions);
 	}
 }
@@ -316,7 +317,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 {
 
 	//Differenz Zeitstempel und aktuelle Zeit bzw. Frame
-	int framediff = data.ipc.state.nStepCounter-framestep;
+	framediff = data.ipc.state.nStepCounter-framestep;
 
 	if(framediff > 20){
 		framestep = data.ipc.state.nStepCounter;
@@ -425,7 +426,7 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	//Hier kann eingestellt werden, wie viele Frames vergehen nach dem Entscheiden und dem Handeln, also Ausgang einschalten
 	if (data.ipc.state.nStepCounter-timestamp[0] == 20){
 		//Hier kann eingestellt werden wie lange der Ausgang eingeschaltet bleibt
-		gpiotimer += 10;
+		gpiotimer += 30;
 		//Hier wird der abgearbeitete Zeitstempel verworfen und die restlichen rutschen eins nach oben
 		memmove (&timestamp[0], &timestamp[1], sizeof(timestamp) - sizeof(*timestamp));
 		timestamp[sizetimebuffer-1] = 0;
