@@ -26,6 +26,8 @@ int BiggestArea = 0;
 int RegionNumber = 0;
 int coloravarage[3] = {0,0,0};
 int framediff = 0;
+
+
 #define sizetimebuffer 10
 int timestamp[sizetimebuffer] = {0,0,0,0,0,0,0,0,0,0};
 int gpiotimer = 0;
