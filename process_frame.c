@@ -28,6 +28,7 @@ int coloravarage[3] = {0,0,0};
 #define sizetimebuffer 10
 int timestamp[sizetimebuffer] = {0,0,0,0,0,0,0,0,0,0};
 int gpiotimer = 0;
+int framediff = 0;
 
 //local function definitions
 void ChangeDetection();
@@ -123,11 +124,10 @@ void ProcessFrame() {
 		//DrawBoundingBox(&Pic2, &ImgRegions, color);
 
 		MaxArea(&ImgRegions);
-<<<<<<< HEAD
-		Activated();
-=======
+
+		//Activated();
+
 		ControlGPIO(&Pic2, &ImgRegions);
->>>>>>> 522080289a9c08c873dd815a5c92c7ccb673d7d6
 
 		/*
 		if(!(data.ipc.state.nStepCounter%50)) {
@@ -280,12 +280,13 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 	  err = OscGpioWrite(GPIO_OUT1, TRUE);
 	  err = OscGpioWrite(GPIO_OUT2, TRUE);
 	  outputIO = 0;
-    }else{
+    }
+    else{
 	  err = OscGpioWrite(GPIO_OUT1, FALSE);
 	  err = OscGpioWrite(GPIO_OUT2, FALSE);
 	  outputIO = 1;
     }
-	if (err != SUCCESS) {
+	if (err != SUCCESS){
 	  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 	}
 	return;
@@ -307,19 +308,17 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 	BiggestArea = temp;
 	RegionNumber = numbertemp;
 	//Hier wird bei genuegender Groesse der Aktiviert-Modus aktiviert.
-	if (BiggestArea >= 3000){
+	if (BiggestArea >= 3000 || framediff ==5){
 		Activated(&Pic2, &ImgRegions);
 	}
 }
-
-
 
 
 void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color)
 {
 
 	//Differenz Zeitstempel und aktuelle Zeit bzw. Frame
-	int framediff = data.ipc.state.nStepCounter-framestep;
+	framediff = data.ipc.state.nStepCounter-framestep;
 
 	if(framediff > 20){
 		framestep = data.ipc.state.nStepCounter;
@@ -368,11 +367,6 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 			if (stp > 0){
 				coloravarage[coln] = colorcounter[coln]/stp;
 			}
-<<<<<<< HEAD
-
-			printf("Die 20er-Durchschnittsfarbe ist ");
-=======
->>>>>>> 522080289a9c08c873dd815a5c92c7ccb673d7d6
 			printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 		}
 		// Hier wird dann die decisions-Funktion aufgerufen.
@@ -401,16 +395,8 @@ void Decisions(){
 		color = 1;
 	}
 
-<<<<<<< HEAD
-if (red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[3] < coloravarage[1] && red[4] > coloravarage[1]  && red[5] < coloravarage[2] && red[6] > coloravarage[2])
-{
-//Gummibaerchen ist rot
-color = 1;
-}
-=======
 	//Test: color ist immer = 1
 	color = 1;
->>>>>>> 522080289a9c08c873dd815a5c92c7ccb673d7d6
 
 	if (BiggestArea > 1500/* && BiggestArea < 3000*/)
 	{
@@ -447,11 +433,9 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 		timestamp[sizetimebuffer-1] = 0;
 	}
 
-<<<<<<< HEAD
-if (size == 1 && color == 1)
-{
+
 //GPIOS ansteuern
-=======
+
 	OSC_ERR err = SUCCESS;
 	if(gpiotimer > 0){
 		//Turn on GPIO
@@ -461,7 +445,7 @@ if (size == 1 && color == 1)
 	}else{
 		//Turn off GPIO
 		err = OscGpioWrite(GPIO_OUT1, FALSE);
-		outputIO = 0;
+		outputIO = 0;l
 	}
 	if (err != SUCCESS) {
 		fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
@@ -479,6 +463,5 @@ if (size == 1 && color == 1)
 	printf("%d", gpiotimer);
 	printf("\n");
 
->>>>>>> 522080289a9c08c873dd815a5c92c7ccb673d7d6
 }
 
