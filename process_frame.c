@@ -21,13 +21,13 @@ typedef struct {
 
 long framestep = 0;
 long colorcounter[3] = {0,0,0};
+int coloravarage[3] = {0,0,0};
 long stp = 0;
 int BiggestArea = 0;
+int BiggestAreaCounter;
+int BiggestAreaAvarage = 0;
 int RegionNumber = 0;
-int coloravarage[3] = {0,0,0};
 int framediff = 0;
-
-
 #define sizetimebuffer 10
 int timestamp[sizetimebuffer] = {0,0,0,0,0,0,0,0,0,0};
 int gpiotimer = 0;
@@ -72,6 +72,11 @@ void InitProcess() {
 	OscGpioWrite(GPIO_OUT2, FALSE);
 	//set initial status of IO
 	outputIO = 1;
+
+
+	FILE *fp = fopen("outfile.txt", "w");
+	fclose(fp);
+
 }
 
 
@@ -126,7 +131,11 @@ void ProcessFrame() {
 		//DrawBoundingBox(&Pic2, &ImgRegions, color);
 
 		MaxArea(&ImgRegions);
+
+		//Activated();
+
 		ControlGPIO(&Pic2, &ImgRegions);
+
 
 /*
 		if(!(data.ipc.state.nStepCounter%50)) {
@@ -279,15 +288,15 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 	  err = OscGpioWrite(GPIO_OUT1, TRUE);
 	  err = OscGpioWrite(GPIO_OUT2, TRUE);
 	  outputIO = 0;
-    }else{
+    }
+    else{
 	  err = OscGpioWrite(GPIO_OUT1, FALSE);
 	  err = OscGpioWrite(GPIO_OUT2, FALSE);
 	  outputIO = 1;
     }
-	if (err != SUCCESS) {
+	if (err != SUCCESS){
 	  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 	}
-
 	return;
 }
 */
@@ -307,12 +316,14 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 	BiggestArea = temp;
 	RegionNumber = numbertemp;
 	//Hier wird bei genuegender Groesse der Aktiviert-Modus aktiviert.
-	if (BiggestArea >= 3000 || framediff <= 5){
+
+	//Differenz Zeitstempel und aktuelle Zeit bzw. Frame
+		framediff = data.ipc.state.nStepCounter-framestep;
+
+	if (BiggestArea >= 1500 || framediff == 5){
 		Activated(&Pic2, &ImgRegions);
 	}
 }
-
-
 
 
 void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color)
@@ -321,12 +332,17 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 	//Differenz Zeitstempel und aktuelle Zeit bzw. Frame
 	framediff = data.ipc.state.nStepCounter-framestep;
 
+	//Ist der Abstand genuegend gross, also nicht mehr das gleiche Gummibaerchen, kann erneut mit dem Errechnen eines Durchschnittes begonnen werden.
 	if(framediff > 20){
+		//Zeitstempel wird gesetzt
 		framestep = data.ipc.state.nStepCounter;
+		//Die Aufzählvariablen werden fuer das neue Gummibarchen wieder auf 0 gesetzt
 		memset (colorcounter, 0, sizeof (colorcounter));
+		BiggestAreaCounter = 0;
 		stp = 0;
 	}
 
+	//Sind wir noch in der Durchschnittsberechnung, wird diese Weitergefuehrt
 	if(framediff < 5){
 		uint8 *pImg = (uint8*)picIn->data;
 		const uint16 width = picIn->width;
@@ -345,6 +361,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 			}
 			CurrentRun = CurrentRun->next;
 		} while (CurrentRun != 0);
+	BiggestAreaCounter += BiggestArea;
 	}
 
 /*
@@ -355,21 +372,30 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 */
 
 
-
+	//Am Ende des Betrachtungzeitraumes
 	if(framediff == 5){
-
+		//Durchschnitts-Variable wird auf Null gesetzt
 		memset (coloravarage, 0, sizeof (coloravarage));
+		//stp wird durch anzahl farben geteilt. Somit haben wir die totale anzahl analysierter pixel
 		stp = stp/3;
 
+		//Ueberpruefungsausgabe
 		printf("\n");
 		printf("Die 20-er Durchschnittsfarbe ist:");
 		printf("\n");
+
+		//Hier wird der Farbdurchschnitt errechnet:
 		for(int coln = 0; coln < NUM_COLORS; coln++){
 			if (stp > 0){
 				coloravarage[coln] = colorcounter[coln]/stp;
 			}
 			printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 		}
+		if (stp > 0){
+			BiggestAreaAvarage = BiggestAreaCounter/5;
+		}
+
+
 		// Hier wird dann die decisions-Funktion aufgerufen.
 		Decisions();
 	}
@@ -378,31 +404,51 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 
 void Decisions(){
 
-	int white[6] = {100,200,100,200,100,200};
-	int red [6] = {50,150,50,150,50,150};
+	//Relevante Werte werden in Textdatei geschrieben
+	FILE *fp = fopen("outfile.txt", "a");
+	fprintf(fp,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
+	fclose(fp);
+
+	int white[6] = {76,119,135,200,89,144};
+	int red [6] = {38,63,56,99,53,95};
+	//int red [6] = {0,255,0,255,0,255};
 	int color = 0;
 	int size = 0;
 
 
-	if (white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[3] < coloravarage[1] && white[4] > coloravarage[1]  && white[5] < coloravarage[2] && white[6] > coloravarage[2])
+
+	if (white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[2] < coloravarage[1] && white[3] > coloravarage[1]  && white[4] < coloravarage[2] && white[5] > coloravarage[2])
 	{
 		//Gummibaerchen ist weiss
 		color = 1;
+		if(BiggestAreaAvarage > 1500 && BiggestArea < 4000){
+			size = 1;
+		}
+
 	}
 
-	if (red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[3] < coloravarage[1] && red[4] > coloravarage[1]  && red[5] < coloravarage[2] && red[6] > coloravarage[2])
+
+
+	if (red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[2] < coloravarage[1] && red[3] > coloravarage[1]  && red[4] < coloravarage[2] && red[5] > coloravarage[2])
 	{
 		//Gummibarrchen ist rot
 		color = 1;
+		if(BiggestAreaAvarage > 1500 && BiggestArea < 6000){
+			size = 1;
+		}
 	}
 
-	//Test: color ist immer = 1
-	color = 1;
+	//Test: color und size sind immer = 1
+	//color = 1;
+	//size = 1;
 
-	if (BiggestArea > 1500/* && BiggestArea < 3000*/)
+
+	/*
+	if (BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 3000)
 	{
 		size=1;
 	}
+	*/
 
 	if (size == 1 && color == 1){
 /*
@@ -426,13 +472,16 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	//Zeitstempelanalyse:
 
 	//Hier kann eingestellt werden, wie viele Frames vergehen nach dem Entscheiden und dem Handeln, also Ausgang einschalten
-	if (data.ipc.state.nStepCounter-timestamp[0] == 20){
+	if (data.ipc.state.nStepCounter-timestamp[0] == 10){
 		//Hier kann eingestellt werden wie lange der Ausgang eingeschaltet bleibt
-		gpiotimer += 30;
+		gpiotimer += 4;
 		//Hier wird der abgearbeitete Zeitstempel verworfen und die restlichen rutschen eins nach oben
 		memmove (&timestamp[0], &timestamp[1], sizeof(timestamp) - sizeof(*timestamp));
 		timestamp[sizetimebuffer-1] = 0;
 	}
+
+
+//GPIOS ansteuern
 
 	OSC_ERR err = SUCCESS;
 	if(gpiotimer > 0){
@@ -462,4 +511,5 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	printf("\n");
 
 }
+
 
