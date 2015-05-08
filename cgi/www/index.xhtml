@@ -21,6 +21,8 @@
 			var inputValues = {
 				exposureTime: 25,
 				Threshold: 30,
+				SortOutRed: 0,
+				SortOutWhite: 0,
 				ImageType: "0"
 			};
 				
@@ -102,7 +104,25 @@
 					<span lang="en">Foreground image after dilation</span>
 				</div>
 			</p>
-			
+			<p>
+				<div class="input" name="SortOutWhite" type="radio" value="0">
+					<span lang="de">Weiss  NICHT aussortieren</span>
+-					<span lang="en">DON'T sort out White</span>
+				</div>	
+				<div class="input" name="SortOutWhite" type="radio" value="1">
+					<span lang="de">Weiss aussortieren</span>
+-					<span lang="en">Sort out White</span>
+				</div>	
+				<div class="input" name="SortOutRed" type="radio" value="0">
+					<span lang="de">Rot NICHT aussortieren</span>
+-					<span lang="en">DON'T sort out Red</span>
+				</div>						
+				<div class="input" name="SortOutRed" type="radio" value="1">
+					<span lang="de">Rot aussortieren</span>
+-					<span lang="en">Sort out Red</span>
+				</div>			
+
+-			</p>
 		</div>
 		
 		<div id="info-box" class="big-box">
@@ -130,6 +150,16 @@
 					<span lang="de">Belichtungszeit:  </span>
 					<span lang="en">Exposure time:    </span>
 					<span id="exposureTime" /> ms/10
+				</p>
+				<p>
+					<span lang="de">Weiss aussortieren?      </span>
+					<span lang="en">Sort out White?       </span>
+					<span id="SortOutWhite" />				
+				</p>
+				<p>
+					<span lang="de">Rot aussortieren?     </span>
+					<span lang="en">Sort out Red?       </span>
+					<span id="SortOutRed" />				
 				</p>
 			</div>
 		</div>

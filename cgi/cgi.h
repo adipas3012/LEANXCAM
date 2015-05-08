@@ -66,6 +66,16 @@ struct ARGUMENT_DATA
 	/*! @brief Says whether the argument ImageType has been
 	 * supplied or not. */
 	bool bImageType_supplied;
+	/*! @brief bool to sort out white.*/
+	int nSortOutWhite;
+	/*! @brief Says whether the argument SortOutWhite has been
+	 * supplied or not. */
+	bool bSortOutWhite_supplied;
+	/*! @brief bool to sort out red.*/
+	int nSortOutRed;
+	/*! @brief Says whether the argument SortOutRed has been
+	 * supplied or not. */
+	bool bSortOutRed_supplied;
 };
 
 /*! @brief Main object structure of the CGI. Contains all 'global'

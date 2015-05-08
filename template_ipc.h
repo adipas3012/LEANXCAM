@@ -21,7 +21,9 @@ enum EnIpcParamIds
 	GET_NEW_IMG,
 	SET_IMAGE_TYPE,
 	SET_EXPOSURE_TIME,
-	SET_THRESHOLD
+	SET_THRESHOLD,
+	SET_SORTOUTRED,
+	SET_SORTOUTWHITE
 };
 
 /*! @brief The path of the unix domain socket used for IPC between the application and its user interface. */
@@ -64,6 +66,8 @@ struct APPLICATION_STATE
 	int nThreshold;
 	/*! @brief  the step counter */
 	unsigned int nStepCounter;
+	int nSortOutWhite;
+	int nSortOutRed;
 };
 
 #endif /*TEMPLATE_IPC_H_*/

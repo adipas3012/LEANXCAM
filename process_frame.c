@@ -77,6 +77,9 @@ void InitProcess() {
 	FILE *fp = fopen("outfile.txt", "w");
 	fclose(fp);
 
+	FILE *fs = fopen("getstat.php", "w");
+	fclose(fs);
+
 }
 
 
@@ -404,10 +407,16 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 
 void Decisions(){
 
-	//Relevante Werte werden in Textdatei geschrieben
+	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
 	FILE *fp = fopen("outfile.txt", "a");
 	fprintf(fp,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
 	fclose(fp);
+
+	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
+	FILE *fs = fopen("getstat.php", "a");
+	fprintf(fs,"<tr><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
+	fclose(fs);
+
 
 	int white[6] = {76,119,135,200,89,144};
 	int red [6] = {38,63,56,99,53,95};
@@ -498,6 +507,7 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 		fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 	}
 
+	/*
 	printf("\n");
 	for(int k = 0; k < sizetimebuffer; k++){
 		printf("%d ", timestamp[k]);
@@ -509,6 +519,15 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	printf("GPIO-Timer:");
 	printf("%d", gpiotimer);
 	printf("\n");
+	*/
+	printf("Weiss:");
+	printf("%d", data.ipc.state.nSortOutWhite);
+	printf("\n");
+	printf("Rot:");
+	printf("%d", data.ipc.state.nSortOutRed);
+	printf("\n");
+
+
 
 }
 
