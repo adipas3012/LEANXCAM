@@ -497,7 +497,7 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	if (err != SUCCESS) {
 		fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 	}
-
+/*
 	printf("\n");
 	for(int k = 0; k < sizetimebuffer; k++){
 		printf("%d ", timestamp[k]);
@@ -508,6 +508,13 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	printf("\n");
 	printf("GPIO-Timer:");
 	printf("%d", gpiotimer);
+	printf("\n");
+*/
+	printf("Weiss:");
+	printf("%d", data.ipc.state.nSortOutWhite);
+	printf("\n");
+	printf("Rot:");
+	printf("%d", data.ipc.state.nSortOutRed);
 	printf("\n");
 
 }

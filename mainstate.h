@@ -17,7 +17,10 @@ enum MainStateEvents {
 	FRAMEPAR_EVT,       /* frame ready to process (parallel to next capture) */
 	IPC_GET_APP_STATE_EVT, /* Webinterface asks for the current application state. */
 	IPC_GET_NEW_IMG_EVT, /* Webinterface asks for a new image. */
-	IPC_SET_IMAGE_TYPE_EVT /* Webinterface wants to set the image type. */
+	IPC_SET_IMAGE_TYPE_EVT, /* Webinterface wants to set the image type. */
+	IPC_SET_SORTOUTRED,
+	IPC_SET_SORTOUTWHITE
+
 };
 
 

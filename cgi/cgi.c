@@ -25,6 +25,8 @@ struct CGI_TEMPLATE cgi;
 /*! @brief All potential arguments supplied to this CGI. */
 struct ARGUMENT args[] =
 {
+	{ "SortOutWhite", INT_ARG, &cgi.args.nSortOutWhite, &cgi.args.bSortOutWhite_supplied },
+	{ "SortOutRed", INT_ARG, &cgi.args.nSortOutRed, &cgi.args.bSortOutRed_supplied },
 	{ "exposureTime", INT_ARG, &cgi.args.nExposureTime, &cgi.args.bExposureTime_supplied },
 	{ "Threshold", INT_ARG, &cgi.args.nThreshold, &cgi.args.bThreshold_supplied },
 	{ "ImageType", INT_ARG, &cgi.args.nImageType, &cgi.args.bImageType_supplied }
@@ -226,6 +228,25 @@ static OSC_ERR SetOptions()
 			return err;
 		}
 	}
+	if (pArgs->bSortOutWhite_supplied)
+	{
+		err = OscIpcSetParam(cgi.ipcChan, &pArgs->nSortOutWhite, SET_SORTOUTWHITE, sizeof(pArgs->nSortOutWhite));
+		if (err != SUCCESS)
+		{
+			OscLog(DEBUG, "CGI: Error setting option! (%d)\n", err);
+			return err;
+		}
+	}
+	if (pArgs->bSortOutRed_supplied)
+	{
+		err = OscIpcSetParam(cgi.ipcChan, &pArgs->nSortOutRed, SET_SORTOUTRED, sizeof(pArgs->nSortOutRed));
+		if (err != SUCCESS)
+		{
+			OscLog(DEBUG, "CGI: Error setting option! (%d)\n", err);
+			return err;
+		}
+	}
+
 
 	return SUCCESS;
 }
@@ -248,6 +269,9 @@ static void FormCGIResponse()
 	printf("width: %d\n", OSC_CAM_MAX_IMAGE_WIDTH/2);
 	printf("height: %d\n", OSC_CAM_MAX_IMAGE_HEIGHT/2);
 	printf("ImageType: %u\n", pAppState->nImageType);
+	printf("SortOutWhite: %u\n", pAppState->nSortOutWhite);
+	printf("SortOutRed: %u\n", pAppState->nSortOutRed);
+
 
 	fflush(stdout);
 }

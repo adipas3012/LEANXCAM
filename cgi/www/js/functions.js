@@ -384,7 +384,16 @@ function updateCycle() {
 			//	console.log(event);
 				offline();
 			});
+			if (data.SortOutWhite != inputValues.SortOutWhite)
+				exchangeState("SetOptions", {
+					SortOutWhite: inputValues.SortOutWhite
+				});
+			if (data.SortOutRed != inputValues.SortOutRed)
+				exchangeState("SetOptions", {
+					SortOutRed: inputValues.SortOutRed
+				});
 			
+
 			if (data.ImageType != inputValues.ImageType)
 				exchangeState("SetOptions", {
 					ImageType: inputValues.ImageType
