@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<title>leanXcam Template Web-Interface</title>
@@ -19,8 +17,8 @@
 		<script src="js/functions.js" />
 		<script type="text/javascript"><![CDATA[
 			var inputValues = {
-				exposureTime: 25,
-				Threshold: 30,
+				exposureTime: 53,
+				Threshold: 10,
 				ImageType: "0"
 			};
 				
@@ -41,16 +39,16 @@
 					<img src="imgs/error.png" style="width: 64px" />
 				</span>
 				<span class="title">
-					<span lang="de">Applikation ist deaktiviert.</span>
-					<span lang="en">Application is offline.</span>
+						<span lang="de">Simplector ist deaktiviert.</span>
+					<span lang="en">Simplector is offline.</span>
 				</span>
 				<span>
 					<div>
 						<div class="wheel" />
 					</div>
 					<div class="message">
-						<span lang="de">Versuche mit der Applikation zu verbinden …</span>
-						<span lang="en">Trying to connect to the application …</span>
+					<span lang="de">Versuche mit dem Simplector zu verbinden …</span>
+						<span lang="en">Trying to connect to simplector …</span>
 					</div>
 				</span>
 			</div>
@@ -59,35 +57,26 @@
 			<a href="javascript:setLanguage('de')" id="de">Deutsch</a>
 			<a href="javascript:setLanguage('en')" id="en">English</a>
 		</div>
-		<div class="big-box">
+		<div class="pic">
+		<div class="pic-box">
 			<h3>
 				<span lang="de">Livebild</span>
 				<span lang="en">Live Image</span>
 			</h3>
 			<div id="image" />
 		</div>
+		</div>
+		<div class="rest">
 		<div class="big-box" id="options-box">
-			<h3>
-				<span lang="de">Optionen</span>
-				<span lang="en">Options</span>
-			</h3>
-			<p>
-				<div class="input" name="Threshold" type="slider" value="0 100">
-				<span lang="de">Schwellwert:     </span>
-				<span lang="en">Threshold:       </span>
-				</div>
-			</p>
-			<p>				
-				<div class="input" name="exposureTime" type="slider" value="1 1000 log">
-				<span lang="de">Belichtungszeit:  </span>
-				<span lang="en">Exposure time:    </span>
-				</div> ms/10
-			</p>
 			
 			<h3>
 				<span lang="de">Optionen</span>
 				<span lang="en">Options</span>
 			</h3>
+							<div class="input" name="Threshold" type="hidden" value="10"></div>
+			
+				<div class="input" name="exposureTime" type="hidden" value="53"></div>
+			<!--
 			<p>
 				<div class="input" name="ImageType" type="radio" value="0">
 					<span lang="de">Sensorbild</span>
@@ -102,7 +91,31 @@
 					<span lang="en">Foreground image after dilation</span>
 				</div>
 			</p>
-			
+			-->
+						<p>
+						<span lang="de">Weiss aussortieren?</span>
+					<span lang="en">Sort out white?</span>
+				<div class="input" name="SortOutWhite" type="radio" value="0">
+					<span lang="de">Nein</span>
+					<span lang="en">No</span>
+				</div>				
+				<div class="input" name="SortOutWhite" type="radio" value="1">
+					<span lang="de">Ja</span>
+					<span lang="en">Yes</span>
+				</div>
+			</p>
+			<p>
+					<span lang="de">Rot aussortieren?</span>
+					<span lang="en">Sort out red?</span>
+				<div class="input" name="SortOutRed" type="radio" value="0">
+					<span lang="de">Nein</span>
+					<span lang="en">No</span>
+				</div>				
+				<div class="input" name="SortOutRed" type="radio" value="1">
+					<span lang="de">Ja</span>
+					<span lang="en">Yes</span>
+				</div>
+			</p>
 		</div>
 		
 		<div id="info-box" class="big-box">
@@ -133,6 +146,6 @@
 				</p>
 			</div>
 		</div>
-		
+		</div>
 	</body>
 </html>
