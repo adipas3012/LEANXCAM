@@ -10,6 +10,7 @@
 				margin: 6px 10px;
 			}
 		]]></style>
+		<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 		<script src="js/jquery-1.3.2.min.js" />
 		<script src="js/jquery-ui-1.7.1.custom.min.js" />
 		<script src="js/jquery.timers-1.1.2.js" />
@@ -19,6 +20,8 @@
 			var inputValues = {
 				exposureTime: 53,
 				Threshold: 10,
+				SortOutWhite: "1",
+				SortOutRed: "1",
 				ImageType: "0"
 			};
 				
@@ -30,7 +33,8 @@
 				// Call the function that updates in- and output and eventually calls itself.
 				updateCycle();
 			});
-		]]></script>
+		]]>
+		</script>
 	</head>
 	<body>
 		<div id="off">
@@ -60,8 +64,8 @@
 		<div class="pic">
 		<div class="pic-box">
 			<h3>
-				<span lang="de">Livebild</span>
-				<span lang="en">Live Image</span>
+				<span lang="de">Simplector Livebild</span>
+				<span lang="en">Simplector Live Image</span>
 			</h3>
 			<div id="image" />
 		</div>
@@ -145,6 +149,8 @@
 					<span id="exposureTime" /> ms/10
 				</p>
 			</div>
+		</div>
+		<div id="statbox" class="big-box">
 		</div>
 		</div>
 	</body>

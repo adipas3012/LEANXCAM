@@ -19,18 +19,37 @@ typedef struct {
         uint8 blue, green, red;
 } s_color;
 
+//Zeitstempel bei erstmaliger Detektion von Region >1500
 long framestep = 0;
+//Aufaddierung der Farbwerte über alle analysierten Pixel {b,g,r}
 long colorcounter[3] = {0,0,0};
+//Colorcounter durch # Pixel
 int coloravarage[3] = {0,0,0};
+//Zählvariable für # analysierter Pixel bzw. zuerst # Farbwerte
 long stp = 0;
+//Groesste erkannte Region
 int BiggestArea = 0;
+//Aufaddierung der Groessenwerte der BiggestRegion über die analysierten Frames (timetodetect)
 int BiggestAreaCounter;
+//BiggestAreaCounter durch # analysierte Frames (=timetodetect)
 int BiggestAreaAvarage = 0;
+//Eindeutige Zuweisungsnummer für grösste Area während genau einem Frame
 int RegionNumber = 0;
+//Differenz zw. aktuellem Frame und dem gesetzten Stempel framestep
 int framediff = 0;
+//Definieren von # Positionen der Warteschlange vor Weiche
 #define sizetimebuffer 10
+//Warteschlange vor Weiche, welche bei jedem frame überprüft bzw. abgearbeitet wird
 int timestamp[sizetimebuffer] = {0,0,0,0,0,0,0,0,0,0};
+//gpiotimer schaltet Weiche wenn über 0
 int gpiotimer = 0;
+//Anzahl Frames ueber die Groesse und Farbe gemittelt wird
+#define timetodetect 5
+//Anzahl Frames über die gewartet wird. Verhindert Doppelerkennung des selben Gummibärchen.
+#define timetowait 20
+
+
+
 
 //local function definitions
 void ChangeDetection();
@@ -76,6 +95,10 @@ void InitProcess() {
 
 	FILE *fp = fopen("outfile.txt", "w");
 	fclose(fp);
+
+
+	FILE *st = fopen("cgi\\www\\stat.html", "w");
+	fclose(st);
 
 }
 
@@ -320,7 +343,7 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 	//Differenz Zeitstempel und aktuelle Zeit bzw. Frame
 		framediff = data.ipc.state.nStepCounter-framestep;
 
-	if (BiggestArea >= 1500 || framediff == 5){
+	if (BiggestArea >= 1500 || framediff == timetodetect){
 		Activated(&Pic2, &ImgRegions);
 	}
 }
@@ -333,7 +356,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 	framediff = data.ipc.state.nStepCounter-framestep;
 
 	//Ist der Abstand genuegend gross, also nicht mehr das gleiche Gummibaerchen, kann erneut mit dem Errechnen eines Durchschnittes begonnen werden.
-	if(framediff > 20){
+	if(framediff > timetowait){
 		//Zeitstempel wird gesetzt
 		framestep = data.ipc.state.nStepCounter;
 		//Die Aufzählvariablen werden fuer das neue Gummibarchen wieder auf 0 gesetzt
@@ -343,7 +366,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 	}
 
 	//Sind wir noch in der Durchschnittsberechnung, wird diese Weitergefuehrt
-	if(framediff < 5){
+	if(framediff < timetodetect){
 		uint8 *pImg = (uint8*)picIn->data;
 		const uint16 width = picIn->width;
 		uint8 col[3] = {color.blue, color.green, color. red};
@@ -373,7 +396,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 
 
 	//Am Ende des Betrachtungzeitraumes
-	if(framediff == 5){
+	if(framediff == timetodetect){
 		//Durchschnitts-Variable wird auf Null gesetzt
 		memset (coloravarage, 0, sizeof (coloravarage));
 		//stp wird durch anzahl farben geteilt. Somit haben wir die totale anzahl analysierter pixel
@@ -392,7 +415,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 			printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 		}
 		if (stp > 0){
-			BiggestAreaAvarage = BiggestAreaCounter/5;
+			BiggestAreaAvarage = BiggestAreaCounter/timetodetect;
 		}
 
 
@@ -408,6 +431,12 @@ void Decisions(){
 	FILE *fp = fopen("outfile.txt", "a");
 	fprintf(fp,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
 	fclose(fp);
+	/*
+	//Relevante Werte werden in stat.html geschrieben
+	FILE *st = fopen("/cgi/www/stat.html", "a");
+	fprintf(st,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
+	fclose(st);
+	*/
 
 	int white[6] = {76,119,135,200,89,144};
 	int red [6] = {38,63,56,99,53,95};
@@ -417,7 +446,7 @@ void Decisions(){
 
 
 
-	if (white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[2] < coloravarage[1] && white[3] > coloravarage[1]  && white[4] < coloravarage[2] && white[5] > coloravarage[2])
+	if (data.ipc.state.nSortOutWhite == 1 && white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[2] < coloravarage[1] && white[3] > coloravarage[1]  && white[4] < coloravarage[2] && white[5] > coloravarage[2])
 	{
 		//Gummibaerchen ist weiss
 		color = 1;
@@ -429,7 +458,7 @@ void Decisions(){
 
 
 
-	if (red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[2] < coloravarage[1] && red[3] > coloravarage[1]  && red[4] < coloravarage[2] && red[5] > coloravarage[2])
+	if (data.ipc.state.nSortOutRed == 1 && red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[2] < coloravarage[1] && red[3] > coloravarage[1]  && red[4] < coloravarage[2] && red[5] > coloravarage[2])
 	{
 		//Gummibarrchen ist rot
 		color = 1;
@@ -439,8 +468,8 @@ void Decisions(){
 	}
 
 	//Test: color und size sind immer = 1
-	//color = 1;
-	//size = 1;
+	color = 1;
+	size = 1;
 
 
 	/*

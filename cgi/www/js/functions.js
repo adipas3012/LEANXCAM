@@ -379,6 +379,12 @@ function updateCycle() {
 				})
 				
 				// Close the loop.
+			//---------------------------------------------------------------------------------
+			function loadstat() {
+    			  $("#statbox").load("stat.html"); 
+			}
+			//---------------------------------------------------------------------------------
+
 				online();
 			}, function (event) {
 			//	console.log(event);
@@ -417,3 +423,19 @@ function updateCycle() {
 	
 	online();
 }
+
+//--------------------------------------------------
+/*
+
+window.onload = setupRefresh;
+
+function setupRefresh() {
+  setTimeout("loadstat();", 1000);
+}
+
+function loadstat() {
+      $("#statbox").load("stat.html"); 
+}
+
+*/
+    
