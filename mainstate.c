@@ -159,6 +159,7 @@ Msg const *MainState_top(MainState *me, Msg *msg)
 		data.ipc.state.nThreshold = 30;
 		data.ipc.state.nSortOutRed = 1;
 		data.ipc.state.nSortOutWhite = 1;
+
 		InitProcess();
 		return 0;
 	case IPC_GET_APP_STATE_EVT:

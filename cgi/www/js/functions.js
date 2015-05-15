@@ -390,6 +390,7 @@ function updateCycle() {
 			//	console.log(event);
 				offline();
 			});
+
 			if (data.SortOutWhite != inputValues.SortOutWhite)
 				exchangeState("SetOptions", {
 					SortOutWhite: inputValues.SortOutWhite
