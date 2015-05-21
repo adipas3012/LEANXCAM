@@ -88,7 +88,9 @@ static OSC_ERR HandleIpcRequests(MainState *pMainState)
 			if(data.ipc.state.nExposureTime != *((int*)pReq->pAddr))
 			{
 				data.nExposureTimeChanged = true;
-				data.ipc.state.nExposureTime = *((int*)pReq->pAddr);
+				data.ipc.state.nExposureTime = 53;
+				//data.ipc.state.nExposureTime = *((int*)pReq->pAddr);
+
 			}
 			data.ipc.enReqState = REQ_STATE_ACK_PENDING;//we return immediately
 			break;

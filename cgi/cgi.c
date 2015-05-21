@@ -25,6 +25,7 @@ struct CGI_TEMPLATE cgi;
 /*! @brief All potential arguments supplied to this CGI. */
 struct ARGUMENT args[] =
 {
+
 	{ "SortOutWhite", INT_ARG, &cgi.args.nSortOutWhite, &cgi.args.bSortOutWhite_supplied },
 	{ "SortOutRed", INT_ARG, &cgi.args.nSortOutRed, &cgi.args.bSortOutRed_supplied },
 	{ "exposureTime", INT_ARG, &cgi.args.nExposureTime, &cgi.args.bExposureTime_supplied },
@@ -271,6 +272,7 @@ static void FormCGIResponse()
 	printf("ImageType: %u\n", pAppState->nImageType);
 	printf("SortOutWhite: %u\n", pAppState->nSortOutWhite);
 	printf("SortOutRed: %u\n", pAppState->nSortOutRed);
+
 
 
 	fflush(stdout);

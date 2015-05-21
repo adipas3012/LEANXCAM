@@ -29,6 +29,12 @@ int coloravarage[3] = {0,0,0};
 long stp = 0;
 //Groesste erkannte Region
 int BiggestArea = 0;
+//Zweitgroesste erkannte Region
+int SecondBiggestArea = 0;
+//Aufaddierung der Groessenwerte der SecondBiggestArea über die analysierten Frames (timetodetect)
+int SecondBiggestAreaCounter;
+//SecondBiggestAreaCounter durch # analysierte Frames (=timetodetect)
+int SecondBigAvarage = 0;
 //Aufaddierung der Groessenwerte der BiggestRegion über die analysierten Frames (timetodetect)
 int BiggestAreaCounter;
 //BiggestAreaCounter durch # analysierte Frames (=timetodetect)
@@ -51,6 +57,7 @@ int gpiotimer = 0;
 
 
 
+
 //local function definitions
 void ChangeDetection();
 void DetectRegions();
@@ -61,7 +68,6 @@ void MaxArea(struct OSC_VIS_REGIONS *regions);
 void Activated();
 void Decisions();
 void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions);
-
 //width of SENSORIMG (the original camera image is reduced by a factor of 2)
 const int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
 //size of SENSORIMG (the original camera image is reduced by a factor of 2)
@@ -93,12 +99,9 @@ void InitProcess() {
 	outputIO = 1;
 
 
-	FILE *fp = fopen("outfile.txt", "w");
-	fclose(fp);
-
-
-	FILE *st = fopen("cgi\\www\\stat.html", "w");
-	fclose(st);
+	FILE *fs = fopen("/home/httpd/stat.html", "w");
+	fprintf(fs,"<tr><th>Schrittnummer</th><th>framediff</th><th>Biggest Area</th><th>AreaAvarage</th><th>B</th><th>G</th><th>R</th></tr> \n");
+	fclose(fs);
 
 
 }
@@ -190,7 +193,10 @@ void ChangeDetection() {
 												(int16) data.u8TempImage[BACKGROUND][(row+col)*NUM_COLORS+cpl]);
 			}
 			//if the difference is larger than threshold value (can be changed on web interface)
-			if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
+			//if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
+			//if the difference is larger than threshold value (can not be changed on web interface)
+			if(Dif > 10) {
+
 				//set pixel value to 1 in PROCESSFRAME0 image (we use only the first third of the image buffer)
 				data.u8TempImage[PROCESSFRAME0][(row+col)] = 1;
 				//set pixel value to 255 in THRESHOLD image (only the blue plane)
@@ -325,11 +331,15 @@ void toggle(struct OSC_VIS_REGIONS *regions)
 }
 */
 
+//Suche grösste und zweitgrösste Änderung im aktuellen Bild verglichen mit Hintergrundbild.
+//Wenn Änderung grösser als definierte Störungsänderung oder framediff==timetodetect, wird Activated() aufgerufen.
 void MaxArea(struct OSC_VIS_REGIONS *regions){
 	int temp = 0;
+	int secondtemp = 0;
 	int numbertemp = 0;
 	for (int i = 0; i < regions->noOfObjects; i++){
 		if (regions->objects[i].area >= temp){
+			secondtemp = temp;
 			temp = regions->objects[i].area;
 			numbertemp = i;
 		}
@@ -338,6 +348,7 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 
 	//RegionNumber und BiggestArea weitergeben (erst jetzt in externe Variable geschrieben):
 	BiggestArea = temp;
+	SecondBiggestArea = secondtemp;
 	RegionNumber = numbertemp;
 	//Hier wird bei genuegender Groesse der Aktiviert-Modus aktiviert.
 
@@ -363,6 +374,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 		//Die Aufzählvariablen werden fuer das neue Gummibarchen wieder auf 0 gesetzt
 		memset (colorcounter, 0, sizeof (colorcounter));
 		BiggestAreaCounter = 0;
+		SecondBiggestAreaCounter = 0;
 		stp = 0;
 	}
 
@@ -386,6 +398,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 			CurrentRun = CurrentRun->next;
 		} while (CurrentRun != 0);
 	BiggestAreaCounter += BiggestArea;
+	SecondBiggestAreaCounter += SecondBiggestArea;
 	}
 
 /*
@@ -415,11 +428,11 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 			}
 			printf("%d ", coloravarage[coln]); //Ausgabe in Konsole
 		}
+		//Hier wird die Durchschnittgrösse der BiggestArea und der SecondBiggestArea errechnet
 		if (stp > 0){
 			BiggestAreaAvarage = BiggestAreaCounter/timetodetect;
+			SecondBigAvarage = SecondBiggestAreaCounter/timetodetect;
 		}
-
-
 		// Hier wird dann die decisions-Funktion aufgerufen.
 		Decisions();
 	}
@@ -428,31 +441,18 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 
 void Decisions(){
 
-	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
-	FILE *fp = fopen("outfile.txt", "a");
-	fprintf(fp,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
-	fclose(fp);
-	/*
-	//Relevante Werte werden in stat.html geschrieben
-	FILE *st = fopen("/cgi/www/stat.html", "a");
-	fprintf(st,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
-	fclose(st);
-	*/
-
-	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
-	FILE *fs = fopen("getstat.php", "a");
-	fprintf(fs,"<tr><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
-	fclose(fs);
-
-
 	int white[6] = {76,119,135,200,89,144};
-	int red [6] = {38,63,56,99,53,95};
-	//int red [6] = {0,255,0,255,0,255};
+	int darkred [6] = {38,63,56,99,53,95};
+	int lightred [6] = {0,255,0,255,0,255};
+	int green [6] = {0,255,0,255,0,255};
+	int yellow [6] = {0,255,0,255,0,255};
+
+
 	int color = 0;
 	int size = 0;
 
 
-
+//Überprüfung ob Gummibärchen weiss ist
 	if (data.ipc.state.nSortOutWhite == 1 && white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[2] < coloravarage[1] && white[3] > coloravarage[1]  && white[4] < coloravarage[2] && white[5] > coloravarage[2])
 	{
 		//Gummibaerchen ist weiss
@@ -464,27 +464,47 @@ void Decisions(){
 	}
 
 
-
-	if (data.ipc.state.nSortOutRed == 1 && red[0] < coloravarage[0] && red[1] > coloravarage[0]  && red[2] < coloravarage[1] && red[3] > coloravarage[1]  && red[4] < coloravarage[2] && red[5] > coloravarage[2])
+//Überprüfung ob Gummibärchen dunkelrot (darkred) ist
+	else if (data.ipc.state.nSortOutRed == 1 && darkred[0] < coloravarage[0] && darkred[1] > coloravarage[0]  && darkred[2] < coloravarage[1] && darkred[3] > coloravarage[1]  && darkred[4] < coloravarage[2] && darkred[5] > coloravarage[2])
 	{
-		//Gummibarrchen ist rot
+		//Gummibarrchen ist dunkelrot
 		color = 1;
 		if(BiggestAreaAvarage > 1500 && BiggestArea < 6000){
 			size = 1;
 		}
 	}
 
+//Überprüfung ob Gummibärchen hellrot (lightred) ist
+	else if (data.ipc.state.nSortOutRed == 1 && lightred[0] < coloravarage[0] && lightred[1] > coloravarage[0]  && lightred[2] < coloravarage[1] && lightred[3] > coloravarage[1]  && lightred[4] < coloravarage[2] && lightred[5] > coloravarage[2])
+	{
+		//Gummibarrchen ist hellrot
+		color = 1;
+		if(BiggestAreaAvarage > 1500 && BiggestArea < 6000){
+			size = 1;
+		}
+	}
+	else if (lightred[0] < coloravarage[0] && lightred[1] > coloravarage[0]  && lightred[2] < coloravarage[1] && lightred[3] > coloravarage[1]  && lightred[4] < coloravarage[2] && lightred[5] > coloravarage[2])
+	{
+		//Gummibarrchen ist blabla
+
+	}
+
+
 	//Test: color und size sind immer = 1
-	color = 1;
-	size = 1;
+	//color = 1;
+	//size = 1;
 
 
 	/*
-	if (BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 3000)
+	if (BiggestArea > 1500 && BiggestAreaAvarage < 3000)
 	{
 		size=1;
 	}
 	*/
+	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
+	FILE *fs = fopen("/home/httpd/stat.html", "a");
+	fprintf(fs,"<tr><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
+	fclose(fs);
 
 	if (size == 1 && color == 1){
 /*
@@ -555,7 +575,15 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	printf("Rot:");
 	printf("%d", data.ipc.state.nSortOutRed);
 	printf("\n");
+	printf("Belichtung:");
+	printf("%d", data.ipc.state.nExposureTime);
+	printf("\n");
+	printf("Schwelle:");
+	printf("%d", data.ipc.state.nThreshold);
+	printf("\n");
+
 
 }
+
 
 
