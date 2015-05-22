@@ -281,7 +281,7 @@ function asynLoadImage(url, onLoad, onError) {
 	img.error(onError);
 	img.attr("src", url /*+ "?dummy=" + (new Date()).getTime()*/);
 	img.attr("height", 480);
-    img.attr("width", 752);
+    img.attr("width", 752);    
 }
 
 var offBanner = {
