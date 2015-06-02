@@ -89,11 +89,12 @@ int outputIO;
  *
  *//*********************************************************************/
 void InitProcess() {
+
 	//set polarity of digital output (required?)
-	OscGpioSetupPolarity(GPIO_OUT1, TRUE);
+	OscGpioSetupPolarity(GPIO_OUT1, FALSE);
 	OscGpioSetupPolarity(GPIO_OUT2, TRUE);
 	//set one digital output to high the other to low
-	OscGpioWrite(GPIO_OUT1, TRUE);
+	OscGpioWrite(GPIO_OUT1, FALSE);
 	OscGpioWrite(GPIO_OUT2, TRUE);
 	//set initial status of IO
 	outputIO = 0;
@@ -104,7 +105,7 @@ void InitProcess() {
 	fclose(fs);
 
 	FILE *we = fopen("/home/httpd/werte.txt", "w");
-	fprintf(we,"Schrittnummer, framediff, Biggest Area, >AreaAvarage, B, G, R \n");
+	fprintf(we,"Schrittnummer, framediff, Biggest Area, 		AreaAvarage, B, G, R \n");
 	fclose(we);
 
 }
@@ -133,7 +134,7 @@ void ProcessFrame() {
 
 
 		//set frame-buffer THRESHOLD to zero
-		memset(data.u8TempImage[THRESHOLD], 0, sizeof(data.u8TempImage[THRESHOLD]));
+		//memset(data.u8TempImage[THRESHOLD], 0, sizeof(data.u8TempImage[THRESHOLD]));
 
 		//save current image frame in BACKGROUND
 		memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
@@ -155,16 +156,22 @@ void ProcessFrame() {
 		//save current image frame in BACKGROUND (before we draw the rectangles)
 		if((data.ipc.state.nStepCounter==100)) { //each 100th pic captured, will be compared with BACKROUND.
 			memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
+
+			OSC_ERR err = SUCCESS;
+			err = OscGpioWrite(GPIO_OUT1, TRUE);
+			if (err != SUCCESS) {
+				fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
+			}
 		}
 
 		//draw regions directly to the image (the image content is changed!)
 		//DrawBoundingBox(&Pic2, &ImgRegions, color);
 
-		MaxArea(&ImgRegions);
+	if(data.ipc.state.nStepCounter > 100) {
+			MaxArea(&ImgRegions);
+			ControlGPIO(&Pic2, &ImgRegions);
+		}
 
-		//Activated();
-
-		ControlGPIO(&Pic2, &ImgRegions);
 
 
 /*
@@ -389,6 +396,15 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 		SecondBiggestAreaCounter = 0;
 		stp = 0;
 
+		//LED umschalten
+			    OSC_ERR err = SUCCESS;
+				  err = OscGpioWrite(GPIO_OUT1, FALSE);
+				  outputIO = 0;
+				if (err != SUCCESS) {
+				  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
+				}
+
+
 	}
 
 	//Sind wir noch in der Durchschnittsberechnung, wird diese Weitergefuehrt
@@ -461,33 +477,34 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 
 void Decisions(){
 
-	int white[6] = {98,136,164,218,97,164};
-	int darkred [6] = {64,82,96,122,62,79};
-	int lightred [6] = {0,255,0,255,0,255};
-	int green [6] = {0,255,0,255,0,255};
-	int yellow [6] = {0,255,0,255,0,255};
-	int orange [6] = {0,255,0,255,0,255};
+	int white[6] = {101,157,169,228,98,171};
+	int darkred [6] = {53,80,78,112,58,74};
+	int lightred [6] = {57,78,89,117,75,106};
+	int green [6] = {59,82,107,158,58,84};
+	int yellow [6] = {70,100,150,205,96,150};
+	int orange [6] = {61,81,118,150,85,119};
 	int casenumber = 0;
 
 	int color = 0;
 	int size = 0;
 	const char *a[7];
-	a[0] = "unklar";
-	a[1] = "white";
-	a[2] = "darkred";
-	a[3] = "lightred";
-	a[4] = "green";
-	a[5] = "yello";
-	a[6] = "orange";
+	const char *c[7];
+	a[0] = "unklar"; c[0] = "";
+	a[1] = "white"; c[1] = "#FFFFE0";
+	a[2] = "darkred"; c[2] = "#B22222";
+	a[3] = "lightred"; c[3] = "#FF4500";
+	a[4] = "green"; c[4] = "#32CD32";
+	a[5] = "yellow"; c[5] = "#FFFF00";
+	a[6] = "orange"; c[6] = "#FFA500";
 
 
 //Überprüfung ob Gummibärchen weiss ist
-	if (data.ipc.state.nSortOutWhite == 1 && white[0] < coloravarage[0] && white[1] > coloravarage[0]  && white[2] < coloravarage[1] && white[3] > coloravarage[1]  && white[4] < coloravarage[2] && white[5] > coloravarage[2])
+	if (data.ipc.state.nSortOutWhite == 1 && white[0] <= coloravarage[0] && white[1] >= coloravarage[0]  && white[2] <= coloravarage[1] && white[3] >= coloravarage[1]  && white[4] <= coloravarage[2] && white[5] >= coloravarage[2])
 	{
 		//Gummibaerchen ist weiss
 		casenumber = 1;
 		color = 1;
-		if(BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 7000){
+		if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 5500){
 			size = 1;
 		}
 
@@ -495,45 +512,52 @@ void Decisions(){
 
 
 //Überprüfung ob Gummibärchen dunkelrot (darkred) ist
-	else if (data.ipc.state.nSortOutRed == 1 && darkred[0] < coloravarage[0] && darkred[1] > coloravarage[0]  && darkred[2] < coloravarage[1] && darkred[3] > coloravarage[1]  && darkred[4] < coloravarage[2] && darkred[5] > coloravarage[2])
+	else if (data.ipc.state.nSortOutRed == 1 && darkred[0] <= coloravarage[0] && darkred[1] >= coloravarage[0]  && darkred[2] <= coloravarage[1] && darkred[3] >= coloravarage[1]  && darkred[4] <= coloravarage[2] && darkred[5] >= coloravarage[2])
 	{
 		//Gummibarrchen ist dunkelrot
 		casenumber = 2;
 		color = 1;
-		if(BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 7000){
+		if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 6000){
 			size = 1;
 		}
 	}
-/*
+
 //Überprüfung ob Gummibärchen hellrot (lightred) ist
-	else if (data.ipc.state.nSortOutRed == 1 && lightred[0] < coloravarage[0] && lightred[1] > coloravarage[0]  && lightred[2] < coloravarage[1] && lightred[3] > coloravarage[1]  && lightred[4] < coloravarage[2] && lightred[5] > coloravarage[2])
+	else if (data.ipc.state.nSortOutRed == 1 && lightred[0] <= coloravarage[0] && lightred[1] >= coloravarage[0]  && lightred[2] <= coloravarage[1] && lightred[3] >= coloravarage[1]  && lightred[4] <= coloravarage[2] && lightred[5] >= coloravarage[2])
 	{
 		//Gummibarrchen ist hellrot
 		casenumber = 3;
 		color = 1;
-		if(BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 6000){
+		if(BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 6500){
 			size = 1;
 		}
 	}
-	*/
+
 //Überprüfung ob Gummibärchen grün (green) ist
-	else if (green[0] < coloravarage[0] && green[1] > coloravarage[0]  && green[2] < coloravarage[1] && green[3] > coloravarage[1]  && green[4] < coloravarage[2] && green[5] > coloravarage[2])
+	else if (green[0] <= coloravarage[0] && green[1] >= coloravarage[0]  && green[2] <= coloravarage[1] && green[3] >= coloravarage[1]  && green[4] <= coloravarage[2] && green[5] >= coloravarage[2])
 	{
 		//Gummibarrchen ist green
 		casenumber = 4;
 	}
+	//Überprüfung ob Gummibärchen gelb (yellow) ist
+		else if (yellow[0] <= coloravarage[0] && yellow[1] >= coloravarage[0]  && yellow[2] <= coloravarage[1] && yellow[3] >= coloravarage[1]  && yellow[4] <= coloravarage[2] && yellow[5] >= coloravarage[2])
+		{
+			//Gummibarrchen ist yellow
+			casenumber = 5;
+		}
 
-//Überprüfung ob Gummibärchen gelb (yellow) ist
-	else if (yellow[0] < coloravarage[0] && yellow[1] > coloravarage[0]  && yellow[2] < coloravarage[1] && yellow[3] > coloravarage[1]  && yellow[4] < coloravarage[2] && yellow[5] > coloravarage[2])
-	{
-		//Gummibarrchen ist yellow
-		casenumber = 5;
-	}
-//Überprüfung ob Gummibärchen gelb (orange) ist
-	else if (orange[0] < coloravarage[0] && orange[1] > coloravarage[0]  && orange[2] < coloravarage[1] && orange[3] > coloravarage[1]  && orange[4] < coloravarage[2] && orange[5] > coloravarage[2])
+	//Überprüfung ob Gummibärchen gelb (orange) ist
+	else if (orange[0] <= coloravarage[0] && orange[1] >= coloravarage[0]  && orange[2] <= coloravarage[1] && orange[3] >= coloravarage[1]  && orange[4] <= coloravarage[2] && orange[5] >= coloravarage[2])
 	{
 		//Gummibarrchen ist orange
-		casenumber = 5;
+		casenumber = 6;
+	}
+
+
+//Ansonsten ist die farbe "unklar"
+	else{
+		//Gummibarrchen ist "unklar"
+		casenumber = 0;
 	}
 /*
 //Wenn zwei Gummibärchen auf dem Analysebereich liegen, sich jedoch nicht berühren -> Ausschuss, egal welche Farbe
@@ -556,7 +580,7 @@ if(SecondBigAvarage > 2000){
 	*/
 	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
 	FILE *fs = fopen("/home/httpd/stat.html", "a");
-	fprintf(fs,"<tr><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", data.ipc.state.nStepCounter, a[casenumber], BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
+	fprintf(fs,"<tr bgcolor=\"%s\"><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", c[casenumber], data.ipc.state.nStepCounter, a[casenumber], BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
 	fclose(fs);
 
 	if (size == 1 && color == 1){
@@ -580,6 +604,16 @@ if(SecondBigAvarage > 2000){
 void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	//Zeitstempelanalyse:
 
+	if (data.ipc.state.nStepCounter-timestamp[0] == 15){
+		//LED anschalten
+			    OSC_ERR err = SUCCESS;
+				  err = OscGpioWrite(GPIO_OUT1, TRUE);
+				  outputIO = 1;
+				if (err != SUCCESS) {
+				  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
+				}
+	}
+
 	//Hier kann eingestellt werden, wie viele Frames vergehen nach dem Entscheiden und dem Handeln, also Ausgang einschalten
 	if (data.ipc.state.nStepCounter-timestamp[0] == 20){
 		//Hier kann eingestellt werden wie lange der Ausgang eingeschaltet bleibt
@@ -588,6 +622,7 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 		memmove (&timestamp[0], &timestamp[1], sizeof(timestamp) - sizeof(*timestamp));
 		timestamp[sizetimebuffer-1] = 0;
 	}
+
 
 
 //GPIO 2 ansteuern
