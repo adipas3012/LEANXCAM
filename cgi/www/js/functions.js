@@ -400,7 +400,19 @@ function updateCycle() {
 					SortOutRed: inputValues.SortOutRed
 				});
 			
-
+			if (data.SortOutOrange != inputValues.SortOutOrange)
+				exchangeState("SetOptions", {
+					SortOutOrange: inputValues.SortOutOrange
+				});
+			if (data.SortOutYellow != inputValues.SortOutYellow)
+				exchangeState("SetOptions", {
+					SortOutYellow: inputValues.SortOutYellow
+				});
+			if (data.SortOutGreen != inputValues.SortOutGreen)
+				exchangeState("SetOptions", {
+					SortOutGreen: inputValues.SortOutGreen
+				});
+									
 			if (data.ImageType != inputValues.ImageType)
 				exchangeState("SetOptions", {
 					ImageType: inputValues.ImageType
@@ -425,18 +437,3 @@ function updateCycle() {
 	online();
 }
 
-//--------------------------------------------------
-/*
-
-window.onload = setupRefresh;
-
-function setupRefresh() {
-  setTimeout("loadstat();", 1000);
-}
-
-function loadstat() {
-      $("#statbox").load("stat.html"); 
-}
-
-*/
-    

@@ -49,21 +49,23 @@ int framediff = 0;
 int timestamp[sizetimebuffer] = {0,0,0,0,0,0,0,0,0,0};
 //gpiotimer schaltet Weiche wenn über 0
 int gpiotimer = 0;
+
+//----------------------------------------------------------------------
+//Ab hier werden die Zeitwerte eingestellt
 //Anzahl Frames ueber die Groesse und Farbe gemittelt wird
 #define timetodetect 5
 //Anzahl Frames über die gewartet wird. Verhindert Doppelerkennung des selben Gummibärchen.
 #define timetowait 20
-
-
-
+//Anzahl Frames über die gewartet wird nach der Handlungsentscheidung bis zum Schalten der Weiche
+#define waitforaction 20
+//Anzahl Frames, während denen der Ausgang geschalten bleibt (Hubmagnet aktiviert)
+#define durationofaction 20
+//----------------------------------------------------------------------
 
 
 //local function definitions
 void ChangeDetection();
 void DetectRegions();
-void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
-void DrawRegion(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color);
-void toggle(struct OSC_VIS_REGIONS *regions);
 void MaxArea(struct OSC_VIS_REGIONS *regions);
 void Activated();
 void Decisions();
@@ -141,19 +143,13 @@ void ProcessFrame() {
 	} else {
 		//this is done for all following processing steps
 
-		//uncomment the following line to see an example for log-output on the console (for further info c.f. chapter 8.3. of leanXcam user doc)
-		//OscLog(INFO, "%s: currently running ProcessFrame for step counter %d\n", __func__, data.ipc.state.nStepCounter);
-
 		//call function change detection
 		ChangeDetection();
 
-
-
 		//call function for region detection
 		DetectRegions();
-		//DrawRegion(&Pic2, &ImgRegions, color);
 
-		//save current image frame in BACKGROUND (before we draw the rectangles)
+		//save current image frame in BACKGROUND
 		if((data.ipc.state.nStepCounter==100)) { //each 100th pic captured, will be compared with BACKROUND.
 			memcpy(data.u8TempImage[BACKGROUND], data.u8TempImage[SENSORIMG], sizeof(data.u8TempImage[BACKGROUND]));
 
@@ -164,23 +160,10 @@ void ProcessFrame() {
 			}
 		}
 
-		//draw regions directly to the image (the image content is changed!)
-		//DrawBoundingBox(&Pic2, &ImgRegions, color);
-
 	if(data.ipc.state.nStepCounter > 100) {
 			MaxArea(&ImgRegions);
 			ControlGPIO(&Pic2, &ImgRegions);
 		}
-
-
-
-/*
-		if(!(data.ipc.state.nStepCounter%50)) {
-			toggle(&ImgRegions);
-		}
-*/
-
-
 	}
 }
 
@@ -207,8 +190,10 @@ void ChangeDetection() {
 				Dif += abs((int16) data.u8TempImage[SENSORIMG][(row+col)*NUM_COLORS+cpl]-
 												(int16) data.u8TempImage[BACKGROUND][(row+col)*NUM_COLORS+cpl]);
 			}
+
 			//if the difference is larger than threshold value (can be changed on web interface)
 			//if(Dif > NUM_COLORS*data.ipc.state.nThreshold) {
+
 			//if the difference is larger than threshold value (can not be changed on web interface)
 			if(Dif > 25) {
 
@@ -256,99 +241,6 @@ void DetectRegions() {
 	Pic2.type = OSC_PICTURE_BGR_24;
 }
 
-/*********************************************************************//*!
- * @brief draw a bounding box around all regions found in the given
- * OSC_VIS_REGION structure with the given color
- *
- *//*********************************************************************/
-void DrawBoundingBox(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color) {
-        uint16 i, o, cpl;
-        uint8 *pImg = (uint8*)picIn->data;
-        const uint16 width = picIn->width;
-        uint8 col[3] = {color.blue, color.green, color. red};
-        for(o = 0; o < regions->noOfObjects; o++) {
-                /* Draw the horizontal lines. */
-                for (i = regions->objects[o].bboxLeft; i < regions->objects[o].bboxRight; i += 1) {
-                	for(cpl = 0; cpl < NUM_COLORS; cpl++) {
-                        pImg[(width * regions->objects[o].bboxTop + i) * NUM_COLORS + cpl] = col[cpl];
-                        pImg[(width * (regions->objects[o].bboxBottom - 1) + i) * NUM_COLORS + cpl] = col[cpl];
-                	}
-                }
-
-                /* Draw the vertical lines. */
-                for (i = regions->objects[o].bboxTop; i < regions->objects[o].bboxBottom-1; i += 1) {
-                	for(cpl = 0; cpl < NUM_COLORS; cpl++) {
-                        pImg[(width * i + regions->objects[o].bboxLeft) * NUM_COLORS + cpl] = col[cpl];
-                        pImg[(width * i + regions->objects[o].bboxRight) * NUM_COLORS + cpl] = col[cpl];
-                	}
-                }
-        }
-}
-
-void DrawRegion(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_color color) {
-        uint16 o, cpl;
-        uint8 *pImg = (uint8*)picIn->data;
-        const uint16 width = picIn->width;
-        //uint8 col[3] = {color.blue, color.green, color. red};
-        uint8 col[2][3] = {{255,0,0},{0,255,0}};
-        for(o = 0; o < regions->noOfObjects; o++) {
-        	 struct OSC_VIS_REGIONS_RUN* CurrentRun = regions->objects[o].root;
-                // Draw the horizontal lines. */
-        	 do {
-                for (uint16 c = CurrentRun->startColumn; c < CurrentRun->endColumn; c += 1) {
-                	for(cpl = 0; cpl < NUM_COLORS; cpl++) {
-                		pImg[(width * CurrentRun->row + c)* NUM_COLORS + cpl] = col[o%2][cpl];
-                	}
-                }
-                CurrentRun = CurrentRun->next;
-        	 } while (CurrentRun != 0);
-        }
-}
-
-/*********************************************************************//*!
- * @brief Toggle digital output status
- *
- *//*********************************************************************/
-void toggle(struct OSC_VIS_REGIONS *regions)
-{
-    OSC_ERR err = SUCCESS;
-    if(outputIO == 1){
-	  err = OscGpioWrite(GPIO_OUT1, TRUE);
-	  err = OscGpioWrite(GPIO_OUT2, TRUE);
-
-	  outputIO = 0;
-    }else{
-	  err = OscGpioWrite(GPIO_OUT1, FALSE);
-	  err = OscGpioWrite(GPIO_OUT2, FALSE);
-
-	  outputIO = 1;
-    }
-	if (err != SUCCESS) {
-	  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
-	}
-
-	return;
-}
-/*
-void toggle(struct OSC_VIS_REGIONS *regions)
-{
-    OSC_ERR err = SUCCESS;
-    if(regions->noOfObjects>0){
-	  err = OscGpioWrite(GPIO_OUT1, TRUE);
-	  err = OscGpioWrite(GPIO_OUT2, TRUE);
-	  outputIO2 = 0;
-    }
-    else{
-	  err = OscGpioWrite(GPIO_OUT1, FALSE);
-	  err = OscGpioWrite(GPIO_OUT2, FALSE);
-	  outputIO2 = 1;
-    }
-	if (err != SUCCESS){
-	  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
-	}
-	return;
-}
-*/
 
 //Suche grösste und zweitgrösste Änderung im aktuellen Bild verglichen mit Hintergrundbild.
 //Wenn Änderung grösser als definierte Störungsänderung oder framediff==timetodetect, wird Activated() aufgerufen.
@@ -403,8 +295,6 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 				if (err != SUCCESS) {
 				  fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 				}
-
-
 	}
 
 	//Sind wir noch in der Durchschnittsberechnung, wird diese Weitergefuehrt
@@ -430,12 +320,6 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 	SecondBiggestAreaCounter += SecondBiggestArea;
 	}
 
-/*
-	printf("Der colorcounter betraegt: ");
-	for(int k = 0; k < 3; k++){
-	printf("%d ", colorcounter[k]);
-	}
-*/
 
 
 	//Am Ende des Betrachtungzeitraumes
@@ -465,7 +349,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 		// Hier wird dann die decisions-Funktion aufgerufen
 		Decisions();
 
-		//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
+		//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE. Diese Datei ist aufrufbar unter 192.168.1.10/werte.txt und kann z.B. in Excel ausgewertet werden.
 		FILE *we = fopen("/home/httpd/werte.txt", "a");
 		fprintf(we,"%d, %d, %d, %d, %d, %d, %d \n", data.ipc.state.nStepCounter, framediff, BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
 		fclose(we);
@@ -473,22 +357,23 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 	}
 }
 
-
-
 void Decisions(){
 
+//Hier werden die Farbbereiche definiert. Dir Arrays sind folgendermassen aufgebaut: int farbe[6] = {Min. Blau, Max. Blau, Min. Grün, Max. Grün, Min. Rot, Max. Rot}
 	int white[6] = {101,157,169,228,98,171};
 	int darkred [6] = {53,80,78,112,58,74};
 	int lightred [6] = {57,78,89,117,75,106};
 	int green [6] = {59,82,107,158,58,84};
 	int yellow [6] = {70,100,150,205,96,150};
 	int orange [6] = {61,81,118,150,85,119};
+	//Init div. Variablen
 	int casenumber = 0;
-
 	int color = 0;
 	int size = 0;
+
 	const char *a[7];
 	const char *c[7];
+	//Definiert die verschiedenen Cases 0-6 mit den entsprechenden Titel (a) und den Tabellenhintergrundfarben (c)
 	a[0] = "unklar"; c[0] = "";
 	a[1] = "white"; c[1] = "#FFFFE0";
 	a[2] = "darkred"; c[2] = "#B22222";
@@ -503,7 +388,10 @@ void Decisions(){
 	{
 		//Gummibaerchen ist weiss
 		casenumber = 1;
-		color = 1;
+		//Überprüfen der Auswahl aus dem Webinterface
+		if(data.ipc.state.nSortOutWhite == 1){
+		color = 1;}
+		//Grössenüberprüfung
 		if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 5500){
 			size = 1;
 		}
@@ -516,18 +404,24 @@ void Decisions(){
 	{
 		//Gummibarrchen ist dunkelrot
 		casenumber = 2;
-		color = 1;
+		//Überprüfen der Auswahl aus dem Webinterface
+		if(data.ipc.state.nSortOutRed == 1){
+		color = 1;}
+		//Grössenüberprüfung
 		if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 6000){
 			size = 1;
 		}
 	}
 
 //Überprüfung ob Gummibärchen hellrot (lightred) ist
-	else if (data.ipc.state.nSortOutRed == 1 && lightred[0] <= coloravarage[0] && lightred[1] >= coloravarage[0]  && lightred[2] <= coloravarage[1] && lightred[3] >= coloravarage[1]  && lightred[4] <= coloravarage[2] && lightred[5] >= coloravarage[2])
+	else if (lightred[0] <= coloravarage[0] && lightred[1] >= coloravarage[0]  && lightred[2] <= coloravarage[1] && lightred[3] >= coloravarage[1]  && lightred[4] <= coloravarage[2] && lightred[5] >= coloravarage[2])
 	{
 		//Gummibarrchen ist hellrot
 		casenumber = 3;
-		color = 1;
+		//Überprüfen der Auswahl aus dem Webinterface
+		if(data.ipc.state.nSortOutRed == 1){
+		color = 1;}
+		//Grössenüberprüfung
 		if(BiggestAreaAvarage > 1500 && BiggestAreaAvarage < 6500){
 			size = 1;
 		}
@@ -536,19 +430,28 @@ void Decisions(){
 //Überprüfung ob Gummibärchen grün (green) ist
 	else if (green[0] <= coloravarage[0] && green[1] >= coloravarage[0]  && green[2] <= coloravarage[1] && green[3] >= coloravarage[1]  && green[4] <= coloravarage[2] && green[5] >= coloravarage[2])
 	{
+		//Überprüfen der Auswahl aus dem Webinterface
+		if(data.ipc.state.nSortOutGreen == 1){
+		color = 1;}
 		//Gummibarrchen ist green
 		casenumber = 4;
 	}
 	//Überprüfung ob Gummibärchen gelb (yellow) ist
 		else if (yellow[0] <= coloravarage[0] && yellow[1] >= coloravarage[0]  && yellow[2] <= coloravarage[1] && yellow[3] >= coloravarage[1]  && yellow[4] <= coloravarage[2] && yellow[5] >= coloravarage[2])
 		{
-			//Gummibarrchen ist yellow
+			//Überprüfen der Auswahl aus dem Webinterface
+			if(data.ipc.state.nSortOutYellow == 1){
+			color = 1;}
+			//Gummibärchen ist yellow
 			casenumber = 5;
 		}
 
-	//Überprüfung ob Gummibärchen gelb (orange) ist
+	//Überprüfung ob Gummibärchen orange ist
 	else if (orange[0] <= coloravarage[0] && orange[1] >= coloravarage[0]  && orange[2] <= coloravarage[1] && orange[3] >= coloravarage[1]  && orange[4] <= coloravarage[2] && orange[5] >= coloravarage[2])
 	{
+		//Überprüfen der Auswahl aus dem Webinterface
+		if(data.ipc.state.nSortOutOrange == 1){
+		color = 1;}
 		//Gummibarrchen ist orange
 		casenumber = 6;
 	}
@@ -559,38 +462,19 @@ void Decisions(){
 		//Gummibarrchen ist "unklar"
 		casenumber = 0;
 	}
-/*
+
 //Wenn zwei Gummibärchen auf dem Analysebereich liegen, sich jedoch nicht berühren -> Ausschuss, egal welche Farbe
 if(SecondBigAvarage > 2000){
 	size = 0;
 }
-*/
 
 
-	//Test: color und size sind immer = 1
-	//color = 1;
-	//size = 1;
-
-
-	/*
-	if (BiggestArea > 1500 && BiggestAreaAvarage < 3000)
-	{
-		size=1;
-	}
-	*/
-	//Relevante Werte werden in Textdatei geschrieben / FARBANALYSE
+	//Relevante Werte werden in Textdatei geschrieben / STATISTIKFILE
 	FILE *fs = fopen("/home/httpd/stat.html", "a");
 	fprintf(fs,"<tr bgcolor=\"%s\"><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", c[casenumber], data.ipc.state.nStepCounter, a[casenumber], BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
 	fclose(fs);
 
 	if (size == 1 && color == 1){
-/*
-		OSC_ERR err = SUCCESS;
-		//Turn on GPIO
-		err = OscGpioWrite(GPIO_OUT1, TRUE);
-		outputIO2 = 1;
-*/
-
 		//Zeitstempel setzen auf erste Null-Position im Array timestamp
 		for(int m = 0; m < sizetimebuffer; m++){
 			if(timestamp[m] == 0){
@@ -615,9 +499,9 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	}
 
 	//Hier kann eingestellt werden, wie viele Frames vergehen nach dem Entscheiden und dem Handeln, also Ausgang einschalten
-	if (data.ipc.state.nStepCounter-timestamp[0] == 20){
+	if (data.ipc.state.nStepCounter-timestamp[0] == waitforaction){
 		//Hier kann eingestellt werden wie lange der Ausgang eingeschaltet bleibt
-		gpiotimer += 20;
+		gpiotimer += durationofaction;
 		//Hier wird der abgearbeitete Zeitstempel verworfen und die restlichen rutschen eins nach oben
 		memmove (&timestamp[0], &timestamp[1], sizeof(timestamp) - sizeof(*timestamp));
 		timestamp[sizetimebuffer-1] = 0;
@@ -641,36 +525,6 @@ void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	if (err != SUCCESS) {
 		fprintf(stderr, "%s: ERROR: GPIO write error! (%d)\n", __func__, err);
 	}
-
-
-	/*
-	printf("\n");
-	for(int k = 0; k < sizetimebuffer; k++){
-		printf("%d ", timestamp[k]);
-	}
-	printf("\n");
-	printf("Aktueller Schritt:");
-	printf("%d", data.ipc.state.nStepCounter);
-	printf("\n");
-	printf("GPIO-Timer:");
-	printf("%d", gpiotimer);
-	printf("\n");
-*/
-
-	printf("Weiss:");
-	printf("%d", data.ipc.state.nSortOutWhite);
-	printf("\n");
-	printf("Rot:");
-	printf("%d", data.ipc.state.nSortOutRed);
-	printf("\n");
-	printf("Belichtung:");
-	printf("%d", data.ipc.state.nExposureTime);
-	printf("\n");
-	printf("Schwelle:");
-	printf("%d", data.ipc.state.nThreshold);
-	printf("\n");
-
-
 }
 
 

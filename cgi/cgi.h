@@ -76,7 +76,19 @@ struct ARGUMENT_DATA
 	/*! @brief Says whether the argument SortOutRed has been
 	 * supplied or not. */
 	bool bSortOutRed_supplied;
-
+	/*! @brief bool to sort out red.*/
+	int nSortOutOrange;
+	/*! @brief Says whether the argument SortOutRed has been
+	 * supplied or not. */
+	bool bSortOutOrange_supplied;	/*! @brief bool to sort out red.*/
+	int nSortOutGreen;
+	/*! @brief Says whether the argument SortOutRed has been
+	 * supplied or not. */
+	bool bSortOutGreen_supplied;	/*! @brief bool to sort out red.*/
+	int nSortOutYellow;
+	/*! @brief Says whether the argument SortOutRed has been
+	 * supplied or not. */
+	bool bSortOutYellow_supplied;
 };
 
 /*! @brief Main object structure of the CGI. Contains all 'global'

@@ -22,7 +22,10 @@ const Msg mainStateMsg[] = {
 	{ IPC_GET_NEW_IMG_EVT },
 	{ IPC_SET_IMAGE_TYPE_EVT },
 	{ IPC_SET_SORTOUTRED },
-	{ IPC_SET_SORTOUTWHITE }
+	{ IPC_SET_SORTOUTWHITE },
+	{ IPC_SET_SORTOUTORANGE },
+	{ IPC_SET_SORTOUTYELLOW },
+	{ IPC_SET_SORTOUTGREEN }
 
 };
 
@@ -109,7 +112,27 @@ static OSC_ERR HandleIpcRequests(MainState *pMainState)
 			}
 			data.ipc.enReqState = REQ_STATE_ACK_PENDING;//we return immediately
 			break;
-
+		case SET_SORTOUTORANGE:
+			if(data.ipc.state.nSortOutOrange != *((int*)pReq->pAddr))
+			{
+				data.ipc.state.nSortOutOrange = *((int*)pReq->pAddr);
+			}
+			data.ipc.enReqState = REQ_STATE_ACK_PENDING;//we return immediately
+			break;
+		case SET_SORTOUTYELLOW:
+			if(data.ipc.state.nSortOutYellow != *((int*)pReq->pAddr))
+			{
+				data.ipc.state.nSortOutYellow = *((int*)pReq->pAddr);
+			}
+			data.ipc.enReqState = REQ_STATE_ACK_PENDING;//we return immediately
+			break;
+		case SET_SORTOUTGREEN:
+			if(data.ipc.state.nSortOutGreen != *((int*)pReq->pAddr))
+			{
+				data.ipc.state.nSortOutGreen = *((int*)pReq->pAddr);
+			}
+			data.ipc.enReqState = REQ_STATE_ACK_PENDING;//we return immediately
+			break;
 		case SET_THRESHOLD:
 			// a new exposure time was given
 			if(data.ipc.state.nThreshold != *((int*)pReq->pAddr))
@@ -161,6 +184,9 @@ Msg const *MainState_top(MainState *me, Msg *msg)
 		data.ipc.state.nThreshold = 30;
 		data.ipc.state.nSortOutRed = 1;
 		data.ipc.state.nSortOutWhite = 1;
+		data.ipc.state.nSortOutOrange = 0;
+		data.ipc.state.nSortOutYellow = 0;
+		data.ipc.state.nSortOutGreen = 0;
 
 		InitProcess();
 		return 0;

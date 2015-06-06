@@ -26,6 +26,9 @@ struct CGI_TEMPLATE cgi;
 struct ARGUMENT args[] =
 {
 
+	{ "SortOutGreen", INT_ARG, &cgi.args.nSortOutGreen, &cgi.args.bSortOutGreen_supplied },
+	{ "SortOutYellow", INT_ARG, &cgi.args.nSortOutYellow, &cgi.args.bSortOutYellow_supplied },
+	{ "SortOutOrange", INT_ARG, &cgi.args.nSortOutOrange, &cgi.args.bSortOutOrange_supplied },
 	{ "SortOutWhite", INT_ARG, &cgi.args.nSortOutWhite, &cgi.args.bSortOutWhite_supplied },
 	{ "SortOutRed", INT_ARG, &cgi.args.nSortOutRed, &cgi.args.bSortOutRed_supplied },
 	{ "exposureTime", INT_ARG, &cgi.args.nExposureTime, &cgi.args.bExposureTime_supplied },
@@ -247,6 +250,31 @@ static OSC_ERR SetOptions()
 			return err;
 		}
 	}
+	if (pArgs->bSortOutOrange_supplied)
+	{
+		err = OscIpcSetParam(cgi.ipcChan, &pArgs->nSortOutOrange, SET_SORTOUTORANGE, sizeof(pArgs->nSortOutOrange));
+		if (err != SUCCESS)
+		{
+			OscLog(DEBUG, "CGI: Error setting option! (%d)\n", err);
+			return err;
+		}
+	}	if (pArgs->bSortOutGreen_supplied)
+	{
+		err = OscIpcSetParam(cgi.ipcChan, &pArgs->nSortOutGreen, SET_SORTOUTGREEN, sizeof(pArgs->nSortOutGreen));
+		if (err != SUCCESS)
+		{
+			OscLog(DEBUG, "CGI: Error setting option! (%d)\n", err);
+			return err;
+		}
+	}	if (pArgs->bSortOutYellow_supplied)
+	{
+		err = OscIpcSetParam(cgi.ipcChan, &pArgs->nSortOutYellow, SET_SORTOUTYELLOW, sizeof(pArgs->nSortOutYellow));
+		if (err != SUCCESS)
+		{
+			OscLog(DEBUG, "CGI: Error setting option! (%d)\n", err);
+			return err;
+		}
+	}
 
 
 	return SUCCESS;
@@ -272,7 +300,9 @@ static void FormCGIResponse()
 	printf("ImageType: %u\n", pAppState->nImageType);
 	printf("SortOutWhite: %u\n", pAppState->nSortOutWhite);
 	printf("SortOutRed: %u\n", pAppState->nSortOutRed);
-
+	printf("SortOutOrange: %u\n", pAppState->nSortOutOrange);
+	printf("SortOutGreen: %u\n", pAppState->nSortOutGreen);
+	printf("SortOutYellow: %u\n", pAppState->nSortOutYellow);
 
 
 	fflush(stdout);
