@@ -23,7 +23,10 @@ enum EnIpcParamIds
 	SET_EXPOSURE_TIME,
 	SET_THRESHOLD,
 	SET_SORTOUTRED,
-	SET_SORTOUTWHITE
+	SET_SORTOUTWHITE,
+	SET_SORTOUTYELLOW,
+	SET_SORTOUTORANGE,
+	SET_SORTOUTGREEN
 
 };
 
@@ -69,6 +72,9 @@ struct APPLICATION_STATE
 	unsigned int nStepCounter;
 	int nSortOutWhite;
 	int nSortOutRed;
+	int nSortOutOrange;
+	int nSortOutYellow;
+	int nSortOutGreen;
 
 };
 

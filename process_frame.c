@@ -59,7 +59,7 @@ int gpiotimer = 0;
 //Anzahl Frames über die gewartet wird nach der Handlungsentscheidung bis zum Schalten der Weiche
 #define waitforaction 20
 //Anzahl Frames, während denen der Ausgang geschalten bleibt (Hubmagnet aktiviert)
-#define durationofaction 20
+#define durationofaction 30
 //----------------------------------------------------------------------
 
 
@@ -93,7 +93,7 @@ int outputIO;
 void InitProcess() {
 
 	//set polarity of digital output (required?)
-	OscGpioSetupPolarity(GPIO_OUT1, FALSE);
+	OscGpioSetupPolarity(GPIO_OUT1, TRUE);
 	OscGpioSetupPolarity(GPIO_OUT2, TRUE);
 	//set one digital output to high the other to low
 	OscGpioWrite(GPIO_OUT1, FALSE);
@@ -107,7 +107,7 @@ void InitProcess() {
 	fclose(fs);
 
 	FILE *we = fopen("/home/httpd/werte.txt", "w");
-	fprintf(we,"Schrittnummer, framediff, Biggest Area, 		AreaAvarage, B, G, R \n");
+	fprintf(we,"Schrittnummer, framediff, Biggest Area, AreaAvarage, B, G, R \n");
 	fclose(we);
 
 }
@@ -125,9 +125,6 @@ void InitProcess() {
  * displayed on the web interface
  *//*********************************************************************/
 void ProcessFrame() {
-	//this color is used for drawing the rectangles in the image
-	s_color color = {255, 0, 0};
-
 	//step counter, is increased after each step
 	if(data.ipc.state.nStepCounter == 1) {
 
@@ -264,7 +261,7 @@ void MaxArea(struct OSC_VIS_REGIONS *regions){
 	//Hier wird bei genuegender Groesse der Aktiviert-Modus aktiviert.
 
 	//Differenz Zeitstempel und aktuelle Zeit bzw. Frame
-		framediff = data.ipc.state.nStepCounter-framestep;
+	framediff = data.ipc.state.nStepCounter-framestep;
 
 	if (BiggestArea >= 1500 || framediff == timetodetect){
 		Activated(&Pic2, &ImgRegions);
@@ -288,7 +285,7 @@ void Activated(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, s_col
 		SecondBiggestAreaCounter = 0;
 		stp = 0;
 
-		//LED umschalten
+		//LED abschalten
 			    OSC_ERR err = SUCCESS;
 				  err = OscGpioWrite(GPIO_OUT1, FALSE);
 				  outputIO = 0;
@@ -433,6 +430,10 @@ void Decisions(){
 		//Überprüfen der Auswahl aus dem Webinterface
 		if(data.ipc.state.nSortOutGreen == 1){
 		color = 1;}
+		//Grössenüberprüfung
+		if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 6000){
+			size = 1;
+		}
 		//Gummibarrchen ist green
 		casenumber = 4;
 	}
@@ -442,6 +443,10 @@ void Decisions(){
 			//Überprüfen der Auswahl aus dem Webinterface
 			if(data.ipc.state.nSortOutYellow == 1){
 			color = 1;}
+			//Grössenüberprüfung
+			if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 6000){
+				size = 1;
+			}
 			//Gummibärchen ist yellow
 			casenumber = 5;
 		}
@@ -452,6 +457,10 @@ void Decisions(){
 		//Überprüfen der Auswahl aus dem Webinterface
 		if(data.ipc.state.nSortOutOrange == 1){
 		color = 1;}
+		//Grössenüberprüfung
+		if(BiggestAreaAvarage > 1000 && BiggestAreaAvarage < 6000){
+			size = 1;
+		}
 		//Gummibarrchen ist orange
 		casenumber = 6;
 	}
@@ -474,6 +483,7 @@ if(SecondBigAvarage > 2000){
 	fprintf(fs,"<tr bgcolor=\"%s\"><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td></tr> \n", c[casenumber], data.ipc.state.nStepCounter, a[casenumber], BiggestArea, BiggestAreaAvarage, coloravarage[0], coloravarage[1], coloravarage[2]);
 	fclose(fs);
 
+
 	if (size == 1 && color == 1){
 		//Zeitstempel setzen auf erste Null-Position im Array timestamp
 		for(int m = 0; m < sizetimebuffer; m++){
@@ -488,7 +498,9 @@ if(SecondBigAvarage > 2000){
 void ControlGPIO(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions){
 	//Zeitstempelanalyse:
 
-	if (data.ipc.state.nStepCounter-timestamp[0] == 15){
+
+
+	if (framediff  == 20){
 		//LED anschalten
 			    OSC_ERR err = SUCCESS;
 				  err = OscGpioWrite(GPIO_OUT1, TRUE);
